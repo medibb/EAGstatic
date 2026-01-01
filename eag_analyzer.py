@@ -398,13 +398,11 @@ class EAGAnalyzer:
         return "(원시 데이터)"
 
     def plot_individual_channels(self, use_filtered: bool = True,
-                                  unified_ylim: bool = True,
                                   save_path: Optional[str] = None):
         """8개 채널을 각각 개별 그래프로 시각화
 
         Args:
             use_filtered: 필터링된 데이터 사용 여부
-            unified_ylim: Y축 범위 통일 여부
             save_path: 저장 경로
         """
         setup_korean_font()
@@ -424,9 +422,17 @@ class EAGAnalyzer:
         time = time[time_mask]
         data = data[time_mask, :]
 
-        # Y축 범위 계산 (통일)
-        if unified_ylim:
-            ylim = self._get_unified_ylim(data)
+        # Y축 범위 계산: 각 채널의 range 중 최대값 + 10% 마진을 통일된 범위로 사용
+        channel_ranges = []
+        channel_centers = []
+        for ch in range(EEG_CHANNELS):
+            ch_min = np.nanmin(data[:, ch])
+            ch_max = np.nanmax(data[:, ch])
+            channel_ranges.append(ch_max - ch_min)
+            channel_centers.append((ch_max + ch_min) / 2)
+
+        max_range = max(channel_ranges)
+        unified_half_range = max_range * 1.1 / 2  # 10% 마진 포함
 
         fig, axes = plt.subplots(EEG_CHANNELS, 1, figsize=(14, 2.5 * EEG_CHANNELS), sharex=True)
 
@@ -442,10 +448,9 @@ class EAGAnalyzer:
             # X축 눈금
             ax.xaxis.set_major_locator(MultipleLocator(5.0))
 
-            # Y축 범위 및 눈금
-            if unified_ylim:
-                ax.set_ylim(ylim)
-            ax.yaxis.set_major_locator(MultipleLocator(config.y_tick_interval))
+            # Y축 범위: 각 채널의 중심값 기준으로 통일된 범위 적용
+            center = channel_centers[ch]
+            ax.set_ylim(center - unified_half_range, center + unified_half_range)
 
             ax.set_xlim(time[0], time[-1])
 
