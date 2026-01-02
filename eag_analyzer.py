@@ -21,7 +21,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 from matplotlib.ticker import MultipleLocator
-from scipy.signal import butter, filtfilt, iirnotch, detrend
+from scipy.signal import butter, filtfilt, detrend
 from pathlib import Path
 from typing import Optional, List, Tuple
 import argparse
@@ -59,20 +59,10 @@ class FilterConfig:
         self.lowpass_cutoff: float = 5.0  # Hz (EMG 제거용)
         self.lowpass_order: int = 5
 
-        # ---- Notch Filter (전원 노이즈 제거) ----
-        self.notch_enabled: bool = False  # 기본 OFF
-        self.notch_freq: float = 60.0    # Hz (한국: 60Hz, 유럽: 50Hz)
-        self.notch_Q: float = 30.0       # 품질계수 (클수록 좁게 필터링)
-        self.notch_harmonics: int = 2    # 고조파 수 (60, 120Hz 제거)
-
         # ---- Drift 보정 ----
         self.drift_enabled: bool = True  # ON/OFF 선택
         self.drift_method: str = "detrend"  # "detrend", "moving", "none"
         self.drift_window_sec: float = 1.0  # 이동평균 윈도우 크기 (초) - moving 방식에서 사용
-
-        # ---- Highpass Filter (DC 제거) ----
-        self.highpass_enabled: bool = False
-        self.highpass_cutoff: float = 0.5  # Hz
 
         # ---- 표시 설정 ----
         self.start_time: float = 5.0  # 표시 시작 시간 (초) - 초기 불안정 구간 제외
@@ -85,15 +75,9 @@ class FilterConfig:
             f"Lowpass Filter: {'ON' if self.lowpass_enabled else 'OFF'}",
             f"  - Cutoff: {self.lowpass_cutoff} Hz",
             f"  - Order: {self.lowpass_order}",
-            f"Notch Filter: {'ON' if self.notch_enabled else 'OFF'}",
-            f"  - Frequency: {self.notch_freq} Hz",
-            f"  - Q Factor: {self.notch_Q}",
-            f"  - Harmonics: {self.notch_harmonics}",
             f"Drift 보정: {'ON' if self.drift_enabled else 'OFF'}",
             f"  - Method: {self.drift_method}",
             f"  - Window (moving): {self.drift_window_sec} sec",
-            f"Highpass Filter: {'ON' if self.highpass_enabled else 'OFF'}",
-            f"  - Cutoff: {self.highpass_cutoff} Hz",
             f"Start Time: {self.start_time} sec",
         ]
         return "\n".join(lines)
@@ -104,15 +88,9 @@ class FilterConfig:
         new_config.lowpass_enabled = self.lowpass_enabled
         new_config.lowpass_cutoff = self.lowpass_cutoff
         new_config.lowpass_order = self.lowpass_order
-        new_config.notch_enabled = self.notch_enabled
-        new_config.notch_freq = self.notch_freq
-        new_config.notch_Q = self.notch_Q
-        new_config.notch_harmonics = self.notch_harmonics
         new_config.drift_enabled = self.drift_enabled
         new_config.drift_method = self.drift_method
         new_config.drift_window_sec = self.drift_window_sec
-        new_config.highpass_enabled = self.highpass_enabled
-        new_config.highpass_cutoff = self.highpass_cutoff
         new_config.start_time = self.start_time
         new_config.y_tick_interval = self.y_tick_interval
         return new_config
@@ -165,35 +143,6 @@ class EMGFilter:
         return y
 
     @staticmethod
-    def apply_notch(data: np.ndarray, fs: int, freq: float = 60.0, Q: float = 30.0) -> np.ndarray:
-        """노치 필터 적용 - 전원 주파수 (60Hz) 제거
-
-        Args:
-            data: 입력 신호
-            fs: 샘플링 레이트
-            freq: 제거할 주파수 (한국 전력 60Hz)
-            Q: 품질 계수 (클수록 좁게 필터링)
-        """
-        nyq = 0.5 * fs
-        w0 = freq / nyq
-        b, a = iirnotch(w0, Q)
-        return filtfilt(b, a, data)
-
-    @staticmethod
-    def apply_notch_harmonics(data: np.ndarray, fs: int, base_freq: float = 60.0,
-                              harmonics: int = 3, Q: float = 30.0) -> np.ndarray:
-        """노치 필터 + 고조파 제거
-
-        60Hz 기본파와 120Hz, 180Hz 등 고조파도 함께 제거
-        """
-        result = data.copy()
-        for i in range(1, harmonics + 1):
-            freq = base_freq * i
-            if freq < fs / 2:  # 나이퀴스트 주파수 이하만
-                result = EMGFilter.apply_notch(result, fs, freq, Q)
-        return result
-
-    @staticmethod
     def remove_drift(data: np.ndarray, method: str = "detrend",
                      window_sec: float = 1.0, fs: int = 250) -> np.ndarray:
         """드리프트(기저선 변동) 제거
@@ -214,18 +163,6 @@ class EMGFilter:
             return data - baseline.to_numpy()
         else:
             return data
-
-    @staticmethod
-    def apply_highpass(data: np.ndarray, cutoff: float, fs: int, order: int = 4) -> np.ndarray:
-        """고역통과 필터 적용 - DC 오프셋 및 저주파 노이즈 제거
-
-        Args:
-            cutoff: 차단 주파수 (보통 0.1-1 Hz)
-        """
-        nyq = 0.5 * fs
-        normal_cutoff = cutoff / nyq
-        b, a = butter(order, normal_cutoff, btype='high', analog=False)
-        return filtfilt(b, a, data)
 
     @staticmethod
     def apply_bandpass(data: np.ndarray, lowcut: float, highcut: float,
@@ -327,9 +264,7 @@ class EAGAnalyzer:
         # 캐시 확인용 파라미터 튜플
         params = (
             config.lowpass_enabled, config.lowpass_cutoff, config.lowpass_order,
-            config.notch_enabled, config.notch_freq, config.notch_Q, config.notch_harmonics,
-            config.drift_enabled, config.drift_method, config.drift_window_sec,
-            config.highpass_enabled, config.highpass_cutoff
+            config.drift_enabled, config.drift_method, config.drift_window_sec
         )
 
         if self._filtered_cache is not None and self._filter_params == params:
@@ -340,26 +275,13 @@ class EAGAnalyzer:
         for ch in range(EEG_CHANNELS):
             data = self.eeg_data[:, ch].copy()
 
-            # 1. 노치 필터 (60Hz 전원 노이즈 + 고조파 제거)
-            if config.notch_enabled:
-                data = self.emg_filter.apply_notch_harmonics(
-                    data, self.sample_rate,
-                    config.notch_freq, config.notch_harmonics, config.notch_Q
-                )
-
-            # 2. 고역통과 필터 (DC 오프셋 제거)
-            if config.highpass_enabled:
-                data = self.emg_filter.apply_highpass(
-                    data, config.highpass_cutoff, self.sample_rate
-                )
-
-            # 3. 저역통과 필터 (EMG 고주파 성분 제거)
+            # 1. 저역통과 필터 (EMG 고주파 성분 제거)
             if config.lowpass_enabled:
                 data = self.emg_filter.apply_lowpass(
                     data, config.lowpass_cutoff, self.sample_rate, config.lowpass_order
                 )
 
-            # 4. 드리프트 제거
+            # 2. 드리프트 제거
             if config.drift_enabled and config.drift_method != "none":
                 data = self.emg_filter.remove_drift(
                     data, method=config.drift_method,
@@ -386,12 +308,8 @@ class EAGAnalyzer:
         parts = []
         if config.lowpass_enabled:
             parts.append(f"LP {config.lowpass_cutoff}Hz")
-        if config.notch_enabled:
-            parts.append(f"Notch {config.notch_freq}Hz")
         if config.drift_enabled:
             parts.append(f"Drift:{config.drift_method}")
-        if config.highpass_enabled:
-            parts.append(f"HP {config.highpass_cutoff}Hz")
 
         if parts:
             return f"(필터링됨: {', '.join(parts)})"
@@ -513,114 +431,6 @@ class EAGAnalyzer:
 
         plt.show()
 
-    def plot_channels_stacked(self, use_filtered: bool = True,
-                               offset_scale: float = 1.5,
-                               save_path: Optional[str] = None):
-        """8개 채널을 수직 오프셋을 주어 스택 형태로 시각화
-
-        Args:
-            use_filtered: 필터링된 데이터 사용 여부
-            offset_scale: 채널 간 오프셋 배율
-            save_path: 저장 경로
-        """
-        setup_korean_font()
-
-        time = self.get_time_axis()
-        config = self.config
-
-        if use_filtered:
-            data = self.get_filtered_data()
-            title_suffix = self._get_filter_title_suffix(config)
-        else:
-            data = self.eeg_data
-            title_suffix = "(원시 데이터)"
-
-        # 시작 시간 이후 데이터만 선택
-        time_mask = time >= config.start_time
-        time = time[time_mask]
-        data = data[time_mask, :]
-
-        # 채널별 오프셋 계산
-        std_all = np.std(data)
-        offset = std_all * offset_scale * 3
-
-        fig, ax = plt.subplots(figsize=(14, 10))
-
-        for ch in range(EEG_CHANNELS):
-            channel_offset = (EEG_CHANNELS - 1 - ch) * offset
-            ax.plot(time, data[:, ch] + channel_offset, linewidth=0.8,
-                    color=CHANNEL_COLORS[ch], label=CHANNEL_NAMES[ch])
-
-        # Y축 레이블 설정
-        y_ticks = [(EEG_CHANNELS - 1 - ch) * offset for ch in range(EEG_CHANNELS)]
-        ax.set_yticks(y_ticks)
-        ax.set_yticklabels(CHANNEL_NAMES)
-
-        ax.set_xlabel('시간 (초)', fontsize=11)
-        ax.set_ylabel('채널', fontsize=11)
-        ax.set_title(f'EAG 8채널 스택 뷰 {title_suffix}\n{self.filename}', fontsize=12)
-        ax.grid(True, alpha=0.3, axis='x')
-
-        ax.xaxis.set_major_locator(MultipleLocator(5.0))
-        ax.set_xlim(time[0], time[-1])
-
-        plt.tight_layout()
-
-        if save_path:
-            plt.savefig(save_path, dpi=150, bbox_inches='tight')
-            print(f"그래프 저장: {save_path}")
-
-        plt.show()
-
-    def plot_comparison_raw_filtered(self, channel: int = 0,
-                                      save_path: Optional[str] = None):
-        """원시 데이터와 필터링 데이터 비교 플롯
-
-        Args:
-            channel: 비교할 채널 번호 (0-7)
-            save_path: 저장 경로
-        """
-        setup_korean_font()
-
-        time = self.get_time_axis()
-        config = self.config
-        raw_data = self.eeg_data
-        filtered_data = self.get_filtered_data()
-
-        # 시작 시간 이후 데이터만 선택
-        time_mask = time >= config.start_time
-        time = time[time_mask]
-        raw_data = raw_data[time_mask, :]
-        filtered_data = filtered_data[time_mask, :]
-
-        fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
-
-        # 원시 데이터
-        axes[0].plot(time, raw_data[:, channel], linewidth=0.8, color='gray', alpha=0.8)
-        axes[0].set_ylabel('진폭 (µV)', fontsize=10)
-        axes[0].set_title(f'{CHANNEL_NAMES[channel]} - 원시 데이터', fontsize=11)
-        axes[0].grid(True, alpha=0.3)
-        axes[0].xaxis.set_major_locator(MultipleLocator(5.0))
-
-        # 필터링 데이터
-        axes[1].plot(time, filtered_data[:, channel], linewidth=0.8,
-                     color=CHANNEL_COLORS[channel])
-        axes[1].set_ylabel('진폭 (µV)', fontsize=10)
-        axes[1].set_xlabel('시간 (초)', fontsize=10)
-        title_suffix = self._get_filter_title_suffix(config)
-        axes[1].set_title(f'{CHANNEL_NAMES[channel]} - {title_suffix}', fontsize=11)
-        axes[1].grid(True, alpha=0.3)
-        axes[1].xaxis.set_major_locator(MultipleLocator(5.0))
-
-        fig.suptitle(f'원시 vs 필터링 비교 - {self.filename}', fontsize=12)
-        plt.tight_layout()
-
-        if save_path:
-            plt.savefig(save_path, dpi=150, bbox_inches='tight')
-            print(f"그래프 저장: {save_path}")
-
-        plt.show()
-
     def generate_report(self, output_dir: Optional[str] = None):
         """분석 리포트 생성 및 모든 그래프 저장
 
@@ -688,18 +498,6 @@ class EAGAnalyzer:
         self.plot_all_channels_overlay(
             use_filtered=True,
             save_path=str(output_dir / f'{base_name}_overlay.png')
-        )
-
-        # 스택 뷰
-        self.plot_channels_stacked(
-            use_filtered=True,
-            save_path=str(output_dir / f'{base_name}_stacked.png')
-        )
-
-        # 원시 vs 필터링 비교
-        self.plot_comparison_raw_filtered(
-            channel=0,
-            save_path=str(output_dir / f'{base_name}_comparison.png')
         )
 
         print(f"\n{'='*60}")
@@ -951,9 +749,6 @@ def main():
   python eag_analyzer.py -i
   python eag_analyzer.py --interactive
 
-  # 노치 필터 ON (기본은 OFF)
-  python eag_analyzer.py --notch
-
   # 드리프트 보정 방법 변경 (moving average)
   python eag_analyzer.py --drift-method moving --drift-window 2.0
 
@@ -964,7 +759,7 @@ def main():
   python eag_analyzer.py --lowpass 20
 
   # 모든 필터 설정 조합
-  python eag_analyzer.py --lowpass 15 --no-notch --drift-method moving --start-time 3
+  python eag_analyzer.py --lowpass 15 --drift-method moving --start-time 3
 
   # 특정 디렉토리 직접 분석 (인터랙티브 모드 건너뛰기)
   python eag_analyzer.py --dir ./data/김O진(F23)_25.12.23
@@ -982,16 +777,6 @@ def main():
     parser.add_argument('--no-lowpass', action='store_true',
                         help='저역통과 필터 비활성화')
 
-    # Notch Filter
-    parser.add_argument('--notch', action='store_true',
-                        help='노치 필터 활성화 (기본: OFF)')
-    parser.add_argument('--notch-freq', type=float, default=60.0,
-                        help='노치 필터 주파수 (기본: 60Hz, 유럽은 50Hz)')
-    parser.add_argument('--notch-q', type=float, default=30.0,
-                        help='노치 필터 Q factor (기본: 30)')
-    parser.add_argument('--notch-harmonics', type=int, default=2,
-                        help='노치 필터 고조파 수 (기본: 2)')
-
     # Drift 보정
     parser.add_argument('--no-drift', action='store_true',
                         help='드리프트 보정 비활성화')
@@ -1000,10 +785,6 @@ def main():
                         help='드리프트 보정 방법 (기본: detrend)')
     parser.add_argument('--drift-window', type=float, default=1.0,
                         help='드리프트 이동평균 윈도우 (초, moving 방식에서 사용, 기본: 1.0)')
-
-    # Highpass Filter
-    parser.add_argument('--highpass', type=float, default=None,
-                        help='고역통과 필터 차단 주파수 (기본: OFF)')
 
     # 표시 설정
     parser.add_argument('--start-time', '-st', type=float, default=5.0,
@@ -1028,21 +809,10 @@ def main():
     config.lowpass_enabled = not args.no_lowpass
     config.lowpass_cutoff = args.lowpass
 
-    # Notch
-    config.notch_enabled = args.notch
-    config.notch_freq = args.notch_freq
-    config.notch_Q = args.notch_q
-    config.notch_harmonics = args.notch_harmonics
-
     # Drift
     config.drift_enabled = not args.no_drift
     config.drift_method = args.drift_method if not args.no_drift else "none"
     config.drift_window_sec = args.drift_window
-
-    # Highpass
-    config.highpass_enabled = args.highpass is not None
-    if args.highpass is not None:
-        config.highpass_cutoff = args.highpass
 
     # 표시 설정
     config.start_time = args.start_time
