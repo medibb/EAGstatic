@@ -174,13 +174,8 @@ def plot_grf(df: pd.DataFrame, title: str = "", body_weight: float = 0.0,
 
 
 def is_forceplate_csv(filepath: str) -> bool:
-    """Kinvent forceplate CSV 파일인지 확인한다."""
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            first_line = f.readline()
-            return 'Kinvent' in first_line or 'K-Plate' in first_line
-    except (UnicodeDecodeError, PermissionError):
-        return False
+    """Kinvent forceplate CSV 파일인지 파일명으로 빠르게 판별한다."""
+    return os.path.basename(filepath).startswith('양발_자세_')
 
 
 def find_forceplate_csvs_in_dir(target_dir: str) -> list:
@@ -189,10 +184,8 @@ def find_forceplate_csvs_in_dir(target_dir: str) -> list:
     for root, dirs, files in os.walk(target_dir):
         dirs[:] = [d for d in dirs if not d.startswith('.')]
         for f in sorted(files):
-            if f.endswith('.csv') and not f.startswith('.'):
-                full_path = os.path.join(root, f)
-                if is_forceplate_csv(full_path):
-                    results.append(full_path)
+            if f.startswith('양발_자세_') and f.endswith('.csv'):
+                results.append(os.path.join(root, f))
     return results
 
 
