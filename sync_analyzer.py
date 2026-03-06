@@ -273,43 +273,145 @@ class SyncAnalyzer:
                 break
         return (start_idx + onset_idx) / SAMPLE_RATE
 
-    def _align_time(self):
-        """EAG와 GRF의 시간축을 이벤트 기반으로 정렬한다.
+    def _sync_by_xcorr(self) -> float:
+        """Cross-correlation으로 EAG-GRF 시간 오프셋을 추정한다.
 
-        양쪽 데이터의 초기 2-3.5초에 발생하는 체중이동 이벤트를 감지하고,
-        이 이벤트의 onset을 기준으로 시간축을 맞춘다.
+        GRF: |Left - Right| envelope
+        EAG: Σ(8ch) |d/dt(LP filtered)| envelope
+        두 envelope의 cross-correlation peak lag를 반환한다.
+
+        Returns:
+            offset in seconds (EAG_time = GRF_time + offset)
+        """
+        # --- GRF envelope: |Left - Right| ---
+        grf_time = self.grf_df['time'].values
+        grf_left = self.grf_df['left_grf'].values
+        grf_right = self.grf_df['right_grf'].values
+        grf_env = np.abs(grf_left - grf_right)
+        # Smoothing (0.5초 window)
+        grf_fs = 1.0 / np.median(np.diff(grf_time)) if len(grf_time) > 1 else SAMPLE_RATE
+        grf_kernel = np.ones(int(0.5 * grf_fs)) / int(0.5 * grf_fs)
+        grf_env_smooth = np.convolve(grf_env, grf_kernel, mode='same')
+
+        # --- EAG envelope: Σ|d/dt(LP filtered)| ---
+        skip_n = 1 if self.eag.eeg_data[0, 0] == 0 else 0
+        eag_raw = self.eag.eeg_data[skip_n:].astype(float)
+        # LP filter 전체 EAG (mirror padding)
+        pad_n = int(2.0 * SAMPLE_RATE)
+        emg_filter = EMGFilter()
+        grad_sum = np.zeros(len(eag_raw) - 1)
+        for ch in range(EEG_CHANNELS):
+            seg = eag_raw[:, ch].copy()
+            front_pad = seg[pad_n:0:-1] if len(seg) > pad_n else seg[::-1]
+            back_pad = seg[-2:-pad_n-2:-1] if len(seg) > pad_n else seg[::-1]
+            padded = np.concatenate([front_pad, seg, back_pad])
+            if self.config.lowpass_enabled:
+                padded = emg_filter.apply_lowpass(
+                    padded, self.config.lowpass_cutoff, SAMPLE_RATE, self.config.lowpass_order)
+            filtered = padded[len(front_pad):len(front_pad) + len(seg)]
+            grad_sum += np.abs(np.diff(filtered))
+        # Smoothing (0.5초 window)
+        eag_kernel = np.ones(int(0.5 * SAMPLE_RATE)) / int(0.5 * SAMPLE_RATE)
+        eag_env_smooth = np.convolve(grad_sum, eag_kernel, mode='same')
+        eag_env_time = np.arange(len(eag_env_smooth)) / SAMPLE_RATE + (skip_n + 0.5) / SAMPLE_RATE
+
+        # --- Resample to common rate (GRF rate) ---
+        common_fs = grf_fs
+        common_duration = min(eag_env_time[-1], grf_time[-1])
+        n_common = int(common_duration * common_fs)
+        t_common = np.arange(n_common) / common_fs
+
+        grf_resampled = np.interp(t_common, grf_time[:len(grf_env_smooth)], grf_env_smooth)
+        eag_resampled = np.interp(t_common, eag_env_time, eag_env_smooth)
+
+        # Normalize
+        grf_resampled -= np.mean(grf_resampled)
+        eag_resampled -= np.mean(eag_resampled)
+        grf_std = np.std(grf_resampled)
+        eag_std = np.std(eag_resampled)
+        if grf_std > 0:
+            grf_resampled /= grf_std
+        if eag_std > 0:
+            eag_resampled /= eag_std
+
+        # --- Cross-correlation ---
+        # 최대 ±10초 범위로 검색
+        max_lag_samples = int(10.0 * common_fs)
+        correlation = np.correlate(
+            eag_resampled,
+            grf_resampled[max_lag_samples:-max_lag_samples] if len(grf_resampled) > 2 * max_lag_samples
+            else grf_resampled,
+            mode='full' if len(grf_resampled) <= 2 * max_lag_samples else 'valid'
+        )
+
+        # 방법: full correlation 후 lag 범위 제한
+        full_corr = np.correlate(eag_resampled, grf_resampled, mode='full')
+        lags = np.arange(-len(grf_resampled) + 1, len(eag_resampled))
+        lag_seconds = lags / common_fs
+        # ±10초 범위만
+        valid = (np.abs(lag_seconds) <= 10.0)
+        full_corr_valid = full_corr[valid]
+        lags_valid = lag_seconds[valid]
+
+        best_idx = np.argmax(full_corr_valid)
+        best_lag = lags_valid[best_idx]
+        self._xcorr_confidence = full_corr_valid[best_idx] / len(t_common)
+
+        return best_lag
+
+    def _align_time(self):
+        """EAG와 GRF의 시간축을 정렬한다.
+
+        2단계 전략:
+        1차: 초기 이벤트 매칭 (2-3.5초 체중이동 이벤트)
+        2차: Cross-correlation fallback (1차 실패 or |offset| > 2초일 때)
+
         Sample 0 artifact를 건너뛰고, mirror padding으로
         LP filter transient 오염을 방지한다.
         """
-        # --- 1) 초기 이벤트 감지 ---
-        eag_event_t = self._detect_initial_event_eag(self.eag.eeg_data)
-        grf_event_t = self._detect_initial_event_grf(self.grf_df, self.body_weight)
+        self.sync_method = "unknown"
+        self._xcorr_confidence = 0.0
 
-        # 이벤트 기반 오프셋: EAG_time = GRF_time + offset
-        self.time_offset = eag_event_t - grf_event_t
+        # --- 1차: 초기 이벤트 매칭 ---
+        event_ok = False
+        eag_event_t = None
+        grf_event_t = None
+        try:
+            eag_event_t = self._detect_initial_event_eag(self.eag.eeg_data)
+            grf_event_t = self._detect_initial_event_grf(self.grf_df, self.body_weight)
+            offset_event = eag_event_t - grf_event_t
+            if abs(offset_event) <= 2.0:
+                self.time_offset = offset_event
+                self.sync_method = "event"
+                event_ok = True
+        except ValueError:
+            pass
 
-        # --- 2) 시간축 계산 ---
+        # --- 2차: Cross-correlation fallback ---
+        if not event_ok:
+            offset_xcorr = self._sync_by_xcorr()
+            self.time_offset = offset_xcorr
+            self.sync_method = "xcorr"
+
+        # --- 시간축 계산 ---
         skip_n = 1 if self.eag.eeg_data[0, 0] == 0 else 0
         eag_raw = self.eag.eeg_data[skip_n:]
         eag_time = np.arange(len(eag_raw)) / SAMPLE_RATE + (skip_n / SAMPLE_RATE)
 
         grf_time = self.grf_df['time'].values
-        # GRF 시간을 EAG 시간축으로 변환
         grf_time_aligned = grf_time + self.time_offset
 
-        # Overlap 구간 (EAG 시간축 기준)
         overlap_start = max(eag_time[0], grf_time_aligned[0])
         overlap_end = min(eag_time[-1], grf_time_aligned[-1])
 
         if overlap_end <= overlap_start:
             raise ValueError(
-                f"이벤트 기반 정렬 후 시간 중첩 구간이 없습니다. "
-                f"offset={self.time_offset:.3f}s"
+                f"시간 정렬 후 중첩 구간이 없습니다. "
+                f"method={self.sync_method}, offset={self.time_offset:.3f}s"
             )
 
         self.overlap_duration = overlap_end - overlap_start
 
-        # 통합 시간축: 0부터 시작
         eag_unified = eag_time - overlap_start
         eag_mask = (eag_unified >= 0) & (eag_unified <= self.overlap_duration)
 
@@ -319,11 +421,11 @@ class SyncAnalyzer:
         self.unified_time_eag = eag_unified[eag_mask]
         self.unified_time_grf = grf_unified[grf_mask]
 
-        # --- 3) EAG 필터링 (mirror padding) ---
+        # --- EAG 필터링 (mirror padding) ---
         eag_indices = np.where(eag_mask)[0]
         n_overlap = len(eag_indices)
         eag_overlap_raw = eag_raw[eag_indices]
-        pad_n = int(2.0 * SAMPLE_RATE)  # 2초 mirror padding
+        pad_n = int(2.0 * SAMPLE_RATE)
 
         emg_filter = EMGFilter()
         self.eag_filtered = np.zeros((n_overlap, EEG_CHANNELS), dtype=float)
@@ -342,17 +444,24 @@ class SyncAnalyzer:
                     window_sec=self.config.drift_window_sec, fs=SAMPLE_RATE)
             self.eag_filtered[:, ch] = overlap_data
 
-        # --- 4) GRF data ---
+        # --- GRF data ---
         self.grf_left = self.grf_df['left_grf'].values[grf_mask]
         self.grf_right = self.grf_df['right_grf'].values[grf_mask]
 
-        # --- 5) Print alignment info ---
+        # --- Print alignment info ---
         print(f"\n{'='*60}")
-        print(f"=== 이벤트 기반 시간 정렬 결과 ===")
+        print(f"=== 시간 정렬 결과 ({self.sync_method}) ===")
         print(f"{'='*60}")
-        print(f"  EAG 초기 이벤트: {eag_event_t:.3f}초 (녹화 시작 기준)")
-        print(f"  GRF 초기 이벤트: {grf_event_t:.3f}초 (녹화 시작 기준)")
-        print(f"  이벤트 기반 오프셋: {self.time_offset:+.3f}초")
+        if eag_event_t is not None:
+            print(f"  EAG 초기 이벤트: {eag_event_t:.3f}초")
+        if grf_event_t is not None:
+            print(f"  GRF 초기 이벤트: {grf_event_t:.3f}초")
+        if self.sync_method == "event":
+            print(f"  동기화 방법: 초기 이벤트 매칭")
+        else:
+            print(f"  동기화 방법: Cross-correlation fallback")
+            print(f"  XCorr confidence: {self._xcorr_confidence:.4f}")
+        print(f"  오프셋: {self.time_offset:+.3f}초")
         print(f"  중첩 구간: {self.overlap_duration:.1f}초")
         print(f"  EAG 샘플: {len(self.unified_time_eag)}")
         print(f"  GRF 샘플: {len(self.unified_time_grf)}")
