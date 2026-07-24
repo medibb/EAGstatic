@@ -34,10 +34,23 @@ STEP_LABELS = ['0-0.5', '0.5-1.0', '1.0-1.5', '1.5-2.0']
 
 # ==================== 로드·정제 ====================
 
+def _inputs(stem: str):
+    """입력 파일 선택: batch 통합(무접미사) 파일 우선, 없으면 단일 피험자(_이름) glob.
+
+    parameter_extractor.py --batch는 `{stem}.csv`(전체 피험자)를,
+    --subject X는 `{stem}_X.csv`를 쓴다. 통합 파일이 있으면 그것만 읽어
+    단일 실행 잔재와의 중복/구버전 혼입을 피한다.
+    """
+    agg = IN_DIR / f'{stem}.csv'
+    if agg.exists():
+        return [agg]
+    return sorted(IN_DIR.glob(f'{stem}_*.csv'))
+
+
 def load_pooled(exclude_review: bool, all_channels: bool) -> pd.DataFrame:
-    files = sorted(IN_DIR.glob('grf_triggered_params_*.csv'))
+    files = _inputs('grf_triggered_params')
     if not files:
-        raise FileNotFoundError(f"{IN_DIR}/grf_triggered_params_*.csv 없음. "
+        raise FileNotFoundError(f"{IN_DIR}/grf_triggered_params.csv 없음. "
                                 "parameter_extractor.py --batch 먼저 실행.")
     df = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
 
@@ -51,7 +64,7 @@ def load_pooled(exclude_review: bool, all_channels: bool) -> pd.DataFrame:
     df = df[df['matched'] == True].copy()
 
     # 품질 병합 (cross_params)
-    qfiles = sorted(IN_DIR.glob('eag_grf_cross_params_*.csv'))
+    qfiles = _inputs('eag_grf_cross_params')
     if qfiles and not all_channels:
         q = pd.concat([pd.read_csv(f) for f in qfiles], ignore_index=True)
         if {'channel_quality', 'subject', 'session', 'channel'} <= set(q.columns):
@@ -209,8 +222,10 @@ def plots(df: pd.DataFrame):
     # 채널별 box
     fig, ax = plt.subplots(figsize=(9, 5))
     chs = sorted(df['channel'].unique())
-    ax.boxplot([df[df['channel'] == c]['abs_amp'].values for c in chs], labels=chs,
+    ax.boxplot([df[df['channel'] == c]['abs_amp'].values for c in chs],
                showfliers=False)
+    ax.set_xticks(range(1, len(chs) + 1))
+    ax.set_xticklabels(chs)
     ax.set_xlabel('EAG channel'); ax.set_ylabel('|EAG amplitude| (uV)')
     ax.set_title('Per-channel response'); ax.grid(alpha=0.3)
     fig.tight_layout(); fig.savefig(OUT_DIR / 'channel_box.png', dpi=120); plt.close(fig)
