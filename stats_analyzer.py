@@ -210,8 +210,9 @@ def _plot_session_type_boxplots(data, params, save_dir):
         agg = agg.dropna(subset=[param])
 
         bp_data = [agg[agg['session_type'] == t][param].values for t in ['s', 'f', 'c']]
-        bp = ax.boxplot(bp_data, labels=['Side (s)', 'Front (f)', 'Crutch (c)'],
-                        patch_artist=True)
+        bp = ax.boxplot(bp_data, patch_artist=True)
+        ax.set_xticks(range(1, 4))
+        ax.set_xticklabels(['Side (s)', 'Front (f)', 'Crutch (c)'])
         colors = ['#2196F3', '#FF9800', '#4CAF50']
         for patch, c in zip(bp['boxes'], colors):
             patch.set_facecolor(c)
@@ -511,7 +512,9 @@ def run_coherence_comparison(data: dict, save_dir: Path):
         ch_data = coh_df[coh_df['channel'] == ch]
         bp_data = [ch_data[ch_data['session_type'] == t]['mean_coh_0_2hz'].dropna().values
                    for t in ['s', 'f', 'c']]
-        bp = ax.boxplot(bp_data, labels=['s', 'f', 'c'], patch_artist=True)
+        bp = ax.boxplot(bp_data, patch_artist=True)
+        ax.set_xticks(range(1, 4))
+        ax.set_xticklabels(['s', 'f', 'c'])
         colors = ['#2196F3', '#FF9800', '#4CAF50']
         for patch, c in zip(bp['boxes'], colors):
             patch.set_facecolor(c)
