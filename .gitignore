@@ -36,3 +36,15 @@ data/
 
 # Results (generated)
 result/
+results/
+
+# Synology NAS artifacts
+@eaDir/
+
+# Claude Code local settings
+.claude/
+
+# Research documents (large binaries, kept on disk only)
+인바디/
+핵심연구/
+*.hwp
