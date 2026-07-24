@@ -20,8 +20,11 @@ python -m venv .venv
 # source .venv/bin/activate  # Linux/Mac
 
 # 의존성 설치
-pip install numpy pandas matplotlib scipy
+pip install -r requirements.txt
 ```
+
+`requirements.txt`에 통계 패키지(`pingouin` 필수, `statsmodels` 권장)가 포함됩니다.
+`statsmodels`가 없으면 `stats_grf_eag.py`는 혼합모형 대신 OLS 기울기 검정으로 자동 대체됩니다.
 
 ## 저장소 구조
 
@@ -66,6 +69,44 @@ EAGstatic/
 ```
 
 > `old_code/`·`dl/`의 어떤 모듈도 core 파일이 import하지 않으므로, 이동으로 파이프라인이 깨지지 않습니다. `old_code/` 스크립트는 루트 기준 상대 import를 쓰므로 단독 실행 시 루트에서 실행해야 합니다.
+
+## 분석 파이프라인 (실행 순서)
+
+전체 흐름은 **동기화 → offset 진단·검토 → edge 수동수정 → 파라미터 추출 → 통계**입니다.
+각 단계의 중간 산출물(JSON)을 다음 단계가 자동 조회하며, "사람이 확정한 값이 최우선" 원칙으로 자동 결과를 오버라이드합니다.
+
+| 단계 | 명령 | 산출물 |
+|------|------|--------|
+| 1. offset 진단 (GRF-anchored edge-align, 동시성 latency≈0) | `python3 grf_triggered_annotator.py --dir data --channels 1 --offset-report` | `result/offset_report.csv` |
+| 2. offset 수동검토 (needs_review 세션) | `python3 offset_review.py --dir data` → 패널 확인 → `offset_review.py --set --subject <S> --session-name <ss> --offset <v>` | `result/manual_offsets.json` |
+| 3. EAG edge 수동수정 (부정확 세션/채널) | GUI `python3 edge_app.py --host 0.0.0.0 --port 8765` · CLI `edge_editor.py review/add/delete/move/reset --session <dir> --channel <n>` | `result/manual_edges.json` |
+| 4. 파라미터 추출 (Phase 1/2/3, GRF 전이별 knee-pair) | `python3 parameter_extractor.py --batch [--phase3]` | `result/phase1_params/grf_triggered_params_*.csv` 등 |
+| 5. 통계 (단계별 부하 dose-response) | `python3 stats_grf_eag.py [--exclude-review]` | `result/stats/` |
+
+**핵심 설계**
+- **GRF-anchored offset**: 깨끗한 GRF 전이 열을 기준으로 EAG edge 열을 정렬(동시성 가정). cycle-skip은 매칭수 최대 + 작은 이동량 우선으로 억제, 큰 교정(|offset|>2)은 자동적용 보류하고 `needs_review`로 넘김.
+- **knee-pair 파라미터**: GRF 전이(rise=부하/fall=이탈)마다 EAG onset+offset 두 knee → 체중부하 cycle당 4 knee. `amplitude`(변화 크기), `grf_step`(부하 단계=dose), `latency`(≈0) 등 기록.
+- **수동 확정 우선**: `manual_offsets.json`(offset)·`manual_edges.json`(edge). 설정 시 자동 검출을 무시하고 확정값 사용 → review 후 4단계를 재실행하면 반영됨.
+- **edge 검출 기본값**: `edge_annotator` min_amp 25, slope_k 3.0, drift ON. 동일 검출기를 GRF signed imbalance에도 적용해 전이를 검출.
+
+> ⚠️ manual review로 offset/edge를 확정한 뒤에는 4단계(`parameter_extractor --batch`)를 **다시 실행**해야 확정값과 `grf_step` 등 최신 컬럼이 반영됩니다. 상세 통계 설계는 `STATS_PLAN.md` 참조.
+
+### 빠른 실행 (run_pipeline.py)
+
+자동 단계(1·4·5)를 한 명령으로 묶어 실행하고, 남은 수동검토 물량을 요약한다.
+`sys.executable`로 하위 스크립트를 호출하므로 Windows·Linux 공용이다.
+
+```bash
+python3 run_pipeline.py status     # 진행상태: offset_report / worklist 백로그 / override 현황
+python3 run_pipeline.py all        # 진단→파라미터추출→통계 일괄 (diag+params+stats)
+python3 run_pipeline.py analyze    # 수동검토 끝난 뒤 재분석 (params+stats, 기본 stage)
+python3 run_pipeline.py params --phase3        # Phase3(주파수)까지 추출
+python3 run_pipeline.py analyze --exclude-review   # needs_review 세션 제외
+python3 run_pipeline.py all --dry-run          # 실행할 명령만 출력
+```
+
+**권장 흐름**: `status`로 백로그 확인 → 2·3단계 수동검토(우선순위: `큰offset` > `저match` > `edge매칭부족`) → `analyze`로 재분석.
+기존 `grf_triggered_params_*.csv`가 `grf_step` 이전 구버전이면 `stats`가 실패하므로, 먼저 `params`(재추출)가 필요하다.
 
 ## 사용법
 
