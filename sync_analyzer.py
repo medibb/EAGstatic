@@ -157,7 +157,8 @@ class SyncAnalyzer:
 
     def __init__(self, session_pair: SessionPair,
                  config: Optional[FilterConfig] = None,
-                 utc_offset: int = 9):
+                 utc_offset: int = 9,
+                 manual_offset: Optional[float] = None):
         self.pair = session_pair
         self.config = config or FilterConfig()
         self.config.start_time = 0.0  # 동기화 분석에서는 0초부터
@@ -179,6 +180,13 @@ class SyncAnalyzer:
         self.eag_filtered = None
         self.grf_left = None
         self.grf_right = None
+
+        # Manual offset: 명시적 파라미터 > JSON 조회 > auto
+        if manual_offset is None:
+            from offset_manager import get_manual_offset
+            manual_offset = get_manual_offset(
+                session_pair.subject_name, session_pair.session_name)
+        self._manual_offset = manual_offset
 
         self._align_time()
 
@@ -362,38 +370,65 @@ class SyncAnalyzer:
     def _align_time(self):
         """EAG와 GRF의 시간축을 정렬한다.
 
-        2단계 전략:
+        Manual offset이 있으면 auto alignment를 건너뛴다.
+        없으면 2단계 전략:
         1차: 초기 이벤트 매칭 (2-3.5초 체중이동 이벤트)
         2차: Cross-correlation fallback (1차 실패 or |offset| > 2초일 때)
-
-        Sample 0 artifact를 건너뛰고, mirror padding으로
-        LP filter transient 오염을 방지한다.
         """
         self.sync_method = "unknown"
         self._xcorr_confidence = 0.0
-
-        # --- 1차: 초기 이벤트 매칭 ---
-        event_ok = False
         eag_event_t = None
         grf_event_t = None
-        try:
-            eag_event_t = self._detect_initial_event_eag(self.eag.eeg_data)
-            grf_event_t = self._detect_initial_event_grf(self.grf_df, self.body_weight)
-            offset_event = eag_event_t - grf_event_t
-            if abs(offset_event) <= 2.0:
-                self.time_offset = offset_event
-                self.sync_method = "event"
-                event_ok = True
-        except ValueError:
-            pass
 
-        # --- 2차: Cross-correlation fallback ---
-        if not event_ok:
-            offset_xcorr = self._sync_by_xcorr()
-            self.time_offset = offset_xcorr
-            self.sync_method = "xcorr"
+        if self._manual_offset is not None:
+            # --- Manual offset ---
+            self.time_offset = self._manual_offset
+            self.sync_method = "manual"
+        else:
+            # --- 1차: 초기 이벤트 매칭 ---
+            event_ok = False
+            try:
+                eag_event_t = self._detect_initial_event_eag(self.eag.eeg_data)
+                grf_event_t = self._detect_initial_event_grf(self.grf_df, self.body_weight)
+                offset_event = eag_event_t - grf_event_t
+                if abs(offset_event) <= 2.0:
+                    self.time_offset = offset_event
+                    self.sync_method = "event"
+                    event_ok = True
+            except ValueError:
+                pass
 
-        # --- 시간축 계산 ---
+            # --- 2차: Cross-correlation fallback ---
+            if not event_ok:
+                offset_xcorr = self._sync_by_xcorr()
+                self.time_offset = offset_xcorr
+                self.sync_method = "xcorr"
+
+        self._compute_unified_axes()
+
+        # --- Print alignment info ---
+        print(f"\n{'='*60}")
+        print(f"=== 시간 정렬 결과 ({self.sync_method}) ===")
+        print(f"{'='*60}")
+        if eag_event_t is not None:
+            print(f"  EAG 초기 이벤트: {eag_event_t:.3f}초")
+        if grf_event_t is not None:
+            print(f"  GRF 초기 이벤트: {grf_event_t:.3f}초")
+        if self.sync_method == "manual":
+            print(f"  동기화 방법: Manual offset")
+        elif self.sync_method == "event":
+            print(f"  동기화 방법: 초기 이벤트 매칭")
+        else:
+            print(f"  동기화 방법: Cross-correlation fallback")
+            print(f"  XCorr confidence: {self._xcorr_confidence:.4f}")
+        print(f"  오프셋: {self.time_offset:+.3f}초")
+        print(f"  중첩 구간: {self.overlap_duration:.1f}초")
+        print(f"  EAG 샘플: {len(self.unified_time_eag)}")
+        print(f"  GRF 샘플: {len(self.unified_time_grf)}")
+        print(f"{'='*60}\n")
+
+    def _compute_unified_axes(self):
+        """time_offset 기반으로 unified time axis, filtered EAG, GRF를 계산한다."""
         skip_n = 1 if self.eag.eeg_data[0, 0] == 0 else 0
         eag_raw = self.eag.eeg_data[skip_n:]
         eag_time = np.arange(len(eag_raw)) / SAMPLE_RATE + (skip_n / SAMPLE_RATE)
@@ -447,25 +482,6 @@ class SyncAnalyzer:
         # --- GRF data ---
         self.grf_left = self.grf_df['left_grf'].values[grf_mask]
         self.grf_right = self.grf_df['right_grf'].values[grf_mask]
-
-        # --- Print alignment info ---
-        print(f"\n{'='*60}")
-        print(f"=== 시간 정렬 결과 ({self.sync_method}) ===")
-        print(f"{'='*60}")
-        if eag_event_t is not None:
-            print(f"  EAG 초기 이벤트: {eag_event_t:.3f}초")
-        if grf_event_t is not None:
-            print(f"  GRF 초기 이벤트: {grf_event_t:.3f}초")
-        if self.sync_method == "event":
-            print(f"  동기화 방법: 초기 이벤트 매칭")
-        else:
-            print(f"  동기화 방법: Cross-correlation fallback")
-            print(f"  XCorr confidence: {self._xcorr_confidence:.4f}")
-        print(f"  오프셋: {self.time_offset:+.3f}초")
-        print(f"  중첩 구간: {self.overlap_duration:.1f}초")
-        print(f"  EAG 샘플: {len(self.unified_time_eag)}")
-        print(f"  GRF 샘플: {len(self.unified_time_grf)}")
-        print(f"{'='*60}\n")
 
     # ==================== GRF Event Detection ====================
 
