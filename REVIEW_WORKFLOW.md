@@ -1,0 +1,109 @@
+# Offset / Edge 검토 워크플로우
+
+GRF-triggered 파이프라인에서 **offset과 edge(knee)를 사람이 검토·확정**하는 절차.
+자동 검출이 부정확한 세션을 육안으로 확인하고 수정하여, 파라미터·통계의 정확도를 확보한다.
+
+## 대원칙
+
+1. **offset 먼저, edge 나중.** edge는 offset이 보정된 시간축(`te_corr`)에 저장되므로, offset을 확정한 뒤 편집한다.
+2. **사람이 확정한 값이 최우선.** `manual_offsets.json`(offset), `manual_edges.json`(edge)이 있으면 자동 검출을 무시하고 그 값을 사용한다.
+3. **확정 후 재추출.** 확정값과 최신 컬럼(`grf_step` 등)은 `parameter_extractor.py --batch`를 다시 돌려야 반영된다.
+
+---
+
+## Step 0. 검토 대상 확인
+
+```bash
+# offset 검토가 필요한 세션 목록
+cat result/offset_review/worklist.csv        # subject, session, reason
+```
+
+reason 의미:
+- `저match` : 정렬 약함
+- `edge매칭부족` : GRF 전이 대비 EAG edge 매칭 적음
+- `큰교정보류(재검토)` : offset 큰 교정이 자동 보류됨 (cycle-skip 또는 기기 시작차)
+- `대안제시(res=…)` : match-profile이 다른 offset 후보 제시
+
+---
+
+## Step 1. OFFSET 검토·확정 (세션별)
+
+### ① 패널 보기
+`result/offset_review/{피험자}_{세션}_review.png` (3단 구성)
+- 상단 : match-rate 프로파일 (초록 점선 = best-match 후보)
+- 중단 : **AUTO** 오버레이 (초록=GRF signed, 빨강=EAG @ auto offset)
+- 하단 : **CORRECTED** 오버레이 (EAG @ corrected offset)
+
+### ② 판단
+- 하단(CORRECTED)에서 **GRF 사각파와 EAG가 잘 겹치면 → 그대로 OK** (아무 작업 안 함, corrected offset 자동 적용)
+- 안 겹치면 → 겹치게 만드는 offset 값을 판단 (제목의 `corrected=` 값 기준, profile의 best-match나 육안 참고)
+
+### ③ 값 확정 (안 맞는 세션만)
+```bash
+python3 offset_review.py --set --subject "(02.02_17)김종문_1" --session-name s2 --offset -0.15
+```
+→ `result/manual_offsets.json` 기록 (SyncAnalyzer가 자동 조회)
+
+### ④ 재확인 / 관리
+```bash
+python3 offset_review.py --session "data/(02.02_17)김종문_1/OpenBCISession_...-s2"  # 패널 재생성
+python3 offset_review.py --list                                                     # 확정 목록
+python3 offset_review.py --clear --subject "(02.02_17)김종문_1" --session-name s2    # 제거(auto 복귀)
+```
+
+---
+
+## Step 2. EDGE 검토·수정 (offset 확정 후, 세션·채널별)
+
+각 GRF 전이(rise=부하 / fall=이탈)마다 EAG **knee-pair(onset+offset) 2개**가 plateau corner에 붙어야 한다 (체중부하 cycle당 4 knee). 놓친 것은 **추가**, 가짜는 **삭제**, 어긋난 것은 **이동**.
+
+### 방법 A: GUI (권장)
+```bash
+python3 edge_app.py --host 0.0.0.0 --port 8765
+```
+브라우저 `http://<서버IP>:8765` 접속 →
+- 상단 **worklist 드롭다운**에서 세션 선택 (또는 세션 경로 직접 입력) → 채널 입력 → **Load**
+- knee 점 **드래그**로 이동 · **Add mode** 후 트레이스 2점 클릭으로 edge 추가 · edge 선택 후 **Delete/Del키** · **snap** 체크 시 corner 자동정렬
+- **Save** → `manual_edges.json` · **Reset→auto** 복귀
+
+### 방법 B: CLI
+```bash
+python3 edge_editor.py review --session "<세션경로>" --channel 1    # 번호라벨 PNG + edge 테이블
+python3 edge_editor.py delete --session "<경로>" --channel 1 --id 3
+python3 edge_editor.py add    --session "<경로>" --channel 1 --onset 30.1 --offset 30.6 --snap
+python3 edge_editor.py move   --session "<경로>" --channel 1 --id 2 --onset 19.2 --offset 19.7 --snap
+python3 edge_editor.py reset  --session "<경로>" --channel 1         # 자동검출로 복귀
+python3 edge_editor.py list                                          # 확정 현황
+```
+매 명령이 `result/edge_edit/{피험자}_{세션}_ch{N}_edit.png`를 갱신 → 즉시 재검토.
+
+> 주의: `review/add/delete/move/reset`은 다섯 서브커맨드 중 **하나**를 고른다. `<세션경로>`,`<채널>`은 실제 값으로 교체하고, 한글 폴더명은 **따옴표**로 감싼다.
+
+---
+
+## Step 3. 확정 후 재추출·통계
+
+```bash
+python3 parameter_extractor.py --batch        # manual offset/edge + grf_step 반영 재추출
+python3 stats_grf_eag.py                       # dose-response 통계 (STATS_PLAN.md 참조)
+```
+
+---
+
+## "하나씩" 루프 요약
+
+```
+worklist 세션 하나 선택
+  → offset 패널 확인 → (필요시) offset_review --set
+  → edge_app에서 그 세션 Load → knee 수정 → Save
+다음 세션 반복
+  → 다 끝나면 parameter_extractor --batch → stats_grf_eag
+```
+
+핵심 산출물: `result/manual_offsets.json`(확정 offset), `result/manual_edges.json`(확정 edge).
+이 둘만 채워지면 재추출 시 전부 자동 반영된다.
+
+## 참고
+
+- 한글 폰트: Linux/Docker는 `pip install koreanize-matplotlib`(또는 `apt-get install -y fonts-nanum`) 후 패널 재생성 시 한글 라벨 정상 표시. macOS는 자동.
+- 상세 파일 구조·전체 파이프라인은 `README.md`, 통계 설계는 `STATS_PLAN.md` 참조.
