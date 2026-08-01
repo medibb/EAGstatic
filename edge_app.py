@@ -73,7 +73,7 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
                   'offset_time': e[3], 'offset_amp': e[4]} for e in auto]
         source = 'auto'
 
-    step = max(1, len(te) // 6000)   # 표시 다운샘플 (~6000점)
+    step = max(1, len(te) // 20000)  # 표시 다운샘플 (확대 시 정밀도 확보용으로 넉넉히)
     r1 = lambda arr: [round(float(x), 1) for x in arr]
     r3 = lambda arr: [round(float(x), 3) for x in arr]
     return {
@@ -183,12 +183,14 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  <button id="addmode">Add mode</button>
  <button id="del">Delete sel</button>
  <label><input type="checkbox" id="snap" checked> snap</label>
+ <button id="fit">전체보기</button>
  <button id="save">Save</button>
  <button id="reset">Reset→auto</button>
  <span id="status"></span>
 </div>
-<div id="tip">드래그=knee 이동 · Add mode 후 트레이스 2점 클릭=edge 추가 · edge 클릭 선택 후 Delete/Del키 · rise=빨강 fall=초록</div>
-<canvas id="cv" width="1400" height="560"></canvas>
+<div id="tip">드래그=knee 이동 · Add mode 후 트레이스 2점 클릭=edge 추가 · edge 클릭 선택 후 Delete/Del키 · rise=빨강 fall=초록
+<br><b>휠=가로축 확대/축소</b> (커서 위치 기준) · <b>Shift+드래그 또는 휠버튼 드래그=좌우 이동</b> · f키/전체보기=원래대로 · 확대할수록 snap 범위도 좁아져 정밀해진다</div>
+<canvas id="cv" width="1400" height="600"></canvas>
 <div id="meta"></div><div id="tbl"></div>
 <script>
 // API 경로는 현재 문서 기준 상대경로로 — code-server의 /proxy/<port>/ 중계 아래에서도 동작
@@ -197,21 +199,41 @@ const BASE=(()=>{let p=location.pathname; if(/\.[a-z]+$/i.test(p))p=p.replace(/[
 const api=p=>BASE+p;
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 let D=null, sel=-1, addPts=[], addMode=false, drag=null;
-const M={l:55,r:15,t:15,b:20}, GH=140; // GRF strip height
-function xr(){return [D.te[0], D.te[D.te.length-1]];}
-function eagYR(){let a=D.eag; return [Math.min(...a), Math.max(...a)];}
-function X(t){let[a,b]=xr();return M.l+(t-a)/(b-a)*(cv.width-M.l-M.r);}
-function Tinv(px){let[a,b]=xr();return a+(px-M.l)/(cv.width-M.l-M.r)*(b-a);}
+let view=null, pan=null;                    // view=[t0,t1] 표시 구간, pan=이동 중 상태
+const M={l:55,r:15,t:15,b:34}, GH=140; // GRF strip height
+function fitView(){view=[D.te[0], D.te[D.te.length-1]];}
+function xr(){return view;}
+function PW(){return cv.width-M.l-M.r;}
+// y축은 보이는 구간 기준으로 자동 스케일 (확대 시 파형이 납작해지지 않게).
+// draw() 시작에 한 번만 계산해 _yr에 캐시 — EY가 매번 전 구간을 스캔하면 O(n^2)가 된다.
+let _yr=null;
+function calcYR(){let[a,b]=xr(),i0=nearestIdx(a),i1=nearestIdx(b),mn=Infinity,mx=-Infinity;
+  for(let i=i0;i<=i1;i++){if(D.eag[i]<mn)mn=D.eag[i];if(D.eag[i]>mx)mx=D.eag[i];}
+  if(!isFinite(mn)||mn===mx){mn=(mn||0)-1;mx=(mx||0)+1;}
+  let pad=(mx-mn)*0.06; return [mn-pad,mx+pad];}
+function eagYR(){return _yr||(_yr=calcYR());}
+function X(t){let[a,b]=xr();return M.l+(t-a)/(b-a)*PW();}
+function Tinv(px){let[a,b]=xr();return a+(px-M.l)/PW()*(b-a);}
 function eagH(){return cv.height-M.t-M.b-GH;}
 function EY(v){let[a,b]=eagYR();return M.t+(b-v)/(b-a)*eagH();}
 function ampAt(t){let i=nearestIdx(t);return D.eag[i];}
-function nearestIdx(t){let lo=0,hi=D.te.length-1;while(lo<hi){let m=(lo+hi)>>1;if(D.te[m]<t)lo=m+1;else hi=m;}return lo;}
+function nearestIdx(t){let lo=0,hi=D.te.length-1;while(lo<hi){let m=(lo+hi)>>1;if(D.te[m]<t)lo=m+1;else hi=m;}
+  if(lo>0&&Math.abs(D.te[lo-1]-t)<Math.abs(D.te[lo]-t))lo--; return lo;}
+// snap 탐색 범위는 확대 배율에 따라 좁아진다 (확대할수록 정밀)
+function snapWin(){let[a,b]=xr();return Math.min(0.30,Math.max(0.02,(b-a)/PW()*10));}
 function snapCorner(t){ if(!document.getElementById('snap').checked) return [t,ampAt(t)];
-  let i0=nearestIdx(t-0.3),i1=nearestIdx(t+0.3); if(i1-i0<5)return[t,ampAt(t)];
+  let w=snapWin(),i0=nearestIdx(t-w),i1=nearestIdx(t+w); if(i1-i0<5){let i=nearestIdx(t);return[D.te[i],D.eag[i]];}
   let best=i0,bv=-1; for(let i=i0+1;i<i1-1;i++){let d2=Math.abs(D.eag[i+1]-2*D.eag[i]+D.eag[i-1]); if(d2>bv){bv=d2;best=i;}} return [D.te[best],D.eag[best]];}
-function draw(){ if(!D)return; ctx.clearRect(0,0,cv.width,cv.height);
+function draw(){ if(!D||!view)return; ctx.clearRect(0,0,cv.width,cv.height);
+ _yr=calcYR();                              // 이번 프레임의 y범위 (view 변경 반영)
+ // 시간축 눈금 (확대 시 현재 위치 파악용)
+ let gy0=cv.height-M.b-GH, [a,b]=xr();
+ ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.textAlign='center';
+ for(let i=0;i<=10;i++){let t=a+(b-a)*i/10,x=X(t);
+  ctx.strokeStyle='#f2f2f2';ctx.beginPath();ctx.moveTo(x,M.t);ctx.lineTo(x,cv.height-M.b);ctx.stroke();
+  ctx.fillText(t.toFixed(2),x,cv.height-M.b+13);}
+ ctx.textAlign='left';ctx.fillText('time (s)  span='+(b-a).toFixed(2)+'s',M.l,cv.height-M.b+27);
  // GRF strip
- let gy0=cv.height-GH, [a,b]=xr();
  ctx.strokeStyle='#2ca02c';ctx.lineWidth=1;ctx.beginPath();
  for(let i=0;i<D.grf_t.length;i++){let x=X(D.grf_t[i]);let y=gy0+GH/2-(D.grf_signed[i])*(GH/2-6);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
  ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(M.l,gy0+GH/2);ctx.lineTo(cv.width-M.r,gy0+GH/2);ctx.stroke();
@@ -236,22 +258,33 @@ function hitKnee(mx,my){for(let k=0;k<D.edges.length;k++){let e=D.edges[k];
 function hitEdge(mx,my){for(let k=0;k<D.edges.length;k++){let e=D.edges[k];let x1=X(e.onset_time),x2=X(e.offset_time);
   if(mx>=Math.min(x1,x2)-4&&mx<=Math.max(x1,x2)+4){let y1=EY(e.onset_amp),y2=EY(e.offset_amp);if(my>Math.min(y1,y2)-16&&my<Math.max(y1,y2)+16)return k;}}return -1;}
 cv.addEventListener('mousedown',ev=>{if(!D)return;let r=cv.getBoundingClientRect(),mx=ev.clientX-r.left,my=ev.clientY-r.top;
+ if(ev.shiftKey||ev.button===1){pan={x:mx,v0:[...view]};ev.preventDefault();return;}   // 좌우 이동
  if(addMode){let t=Tinv(mx);let[st,sv]=snapCorner(t);addPts.push([st,sv]);
    if(addPts.length===2){addPts.sort((p,q)=>p[0]-q[0]);D.edges.push({onset_time:addPts[0][0],onset_amp:addPts[0][1],offset_time:addPts[1][0],offset_amp:addPts[1][1]});D.edges.sort((p,q)=>p.onset_time-q.onset_time);addPts=[];setAdd(false);}
    draw();return;}
  let h=hitKnee(mx,my); if(h){drag=h;sel=h.k;draw();return;}
  let ek=hitEdge(mx,my); sel=ek; draw();});
-cv.addEventListener('mousemove',ev=>{if(!drag||!D)return;let r=cv.getBoundingClientRect();let t=Tinv(ev.clientX-r.left);
+cv.addEventListener('mousemove',ev=>{if(!D)return;let r=cv.getBoundingClientRect(),mx=ev.clientX-r.left;
+ if(pan){let dt=(mx-pan.x)/PW()*(pan.v0[1]-pan.v0[0]);view=[pan.v0[0]-dt,pan.v0[1]-dt];draw();return;}
+ if(!drag)return;let t=Tinv(mx);
  let[st,sv]=snapCorner(t);let e=D.edges[drag.k];if(drag.kn==='on'){e.onset_time=st;e.onset_amp=sv;}else{e.offset_time=st;e.offset_amp=sv;}draw();});
-window.addEventListener('mouseup',()=>{if(drag){D.edges.sort((p,q)=>p.onset_time-q.onset_time);drag=null;draw();}});
-window.addEventListener('keydown',ev=>{if(ev.key==='Delete'&&sel>=0){D.edges.splice(sel,1);sel=-1;draw();}});
+window.addEventListener('mouseup',()=>{pan=null;if(drag){D.edges.sort((p,q)=>p.onset_time-q.onset_time);drag=null;draw();}});
+// 휠 = 커서 위치 기준 가로축 확대/축소
+cv.addEventListener('wheel',ev=>{if(!D||!view)return;ev.preventDefault();
+ let r=cv.getBoundingClientRect(),mx=ev.clientX-r.left; if(mx<M.l||mx>M.l+PW())return;
+ let t=Tinv(mx),f=ev.deltaY>0?1.2:1/1.2;
+ view=[t-(t-view[0])*f, t+(view[1]-t)*f]; draw();},{passive:false});
+window.addEventListener('keydown',ev=>{if(ev.target.tagName==='INPUT')return;
+ if(ev.key==='Delete'&&sel>=0){D.edges.splice(sel,1);sel=-1;draw();}
+ if(ev.key==='f'&&D){fitView();draw();}});
+document.getElementById('fit').onclick=()=>{if(D){fitView();draw();}};
 function setAdd(v){addMode=v;addPts=[];document.getElementById('addmode').classList.toggle('on',v);}
 document.getElementById('addmode').onclick=()=>setAdd(!addMode);
 document.getElementById('del').onclick=()=>{if(sel>=0){D.edges.splice(sel,1);sel=-1;draw();}};
 document.getElementById('load').onclick=load;
 async function load(){let s=document.getElementById('sess').value,ch=document.getElementById('ch').value;
  status('loading...');let res=await fetch(api('api/data?session='+encodeURIComponent(s)+'&channel='+ch));
- let j=await res.json(); if(j.error){status('ERR: '+j.error);return;} D=j;sel=-1;addPts=[];setAdd(false);
+ let j=await res.json(); if(j.error){status('ERR: '+j.error);return;} D=j;sel=-1;addPts=[];setAdd(false);fitView();
  document.getElementById('meta').textContent=`${D.subject}/${D.session} ch${D.channel} · source=${D.source} · offset corr=${D.corrected_offset} (${D.method})`;
  status('loaded '+D.edges.length+' edges');draw();}
 document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch(api('api/save'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();status(j.ok?('saved '+j.n+' edges'):('ERR '+j.error));};

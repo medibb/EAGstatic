@@ -50,7 +50,7 @@ import grf_triggered_annotator as G
 from offset_manager import (set_manual_offset, clear_manual_offset,
                             list_all_offsets, get_manual_offset)
 
-MAX_POINTS = 8000     # 표시 다운샘플 목표 점 수
+MAX_POINTS = 20000    # 표시 다운샘플 목표 점 수 (클릭 정밀도 확보용으로 넉넉히)
 
 
 @contextlib.contextmanager
@@ -263,7 +263,12 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 </div>
 
 <div id="bar2">
- <label><input type="checkbox" id="snap" checked> snap(변곡점 흡착)</label>
+ <label>클릭 흡착
+  <select id="snapmode">
+   <option value="point" selected>가장 가까운 점</option>
+   <option value="inflect">변곡점</option>
+   <option value="free">자유(흡착 없음)</option>
+  </select></label>
  <label><input type="checkbox" id="ovl" checked> overlay(EAG 위에 GRF)</label>
  <button id="undo">Undo pair</button>
  <button id="clearpairs">Clear pairs</button>
@@ -281,7 +286,8 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 </div>
 
 <div id="tip">① GRF 패널(위)에서 기준 변곡점 클릭 → ② EAG 패널(아래)에서 대응 변곡점 클릭 → 쌍 성립 시 즉시 정렬 미리보기.
-여러 쌍을 찍으면 중앙값 사용 · 휠=확대/축소 · 드래그=좌우 이동 · 맨 위는 match-rate 프로파일(클릭 시 그 값으로 이동)</div>
+여러 쌍을 찍으면 중앙값 사용 · 휠=확대/축소 · 드래그=좌우 이동 · 맨 위는 match-rate 프로파일(클릭 시 그 값으로 이동)
+<br>클릭 흡착: <b>가장 가까운 점</b>=모든 샘플 중 최근접(기본, 클릭한 자리에서 거의 안 움직임) · <b>변곡점</b>=근처 코너로 흡착(±0.3s까지 이동) · <b>자유</b>=클릭한 좌표 그대로</div>
 
 <canvas id="cv" width="1420" height="720"></canvas>
 <div id="meta"></div>
@@ -314,14 +320,16 @@ const effOffset=()=>D?D.corrected_offset+S:0;
 function nearestIdx(arr,t){let lo=0,hi=arr.length-1;while(lo<hi){const m=(lo+hi)>>1;arr[m]<t?lo=m+1:hi=m;}
  if(lo>0&&Math.abs(arr[lo-1]-t)<Math.abs(arr[lo]-t))lo--;return lo;}
 function snapWin(){return Math.min(0.30,Math.max(0.03,span()/W()*10));}
-// 근처에서 |2차 미분| 최대인 점 = 변곡/코너
+// 흡착 모드: point=모든 샘플 중 가장 가까운 점 / inflect=근처 |2차미분| 최대점 / free=흡착 없음
 function snapTo(tArr,vArr,t){
- if(!document.getElementById('snap').checked) return t;
+ const m=document.getElementById('snapmode').value;
+ if(m==='free') return t;
+ if(m==='point') return tArr[nearestIdx(tArr,t)];
  const w=snapWin(), i0=nearestIdx(tArr,t-w), i1=nearestIdx(tArr,t+w);
- if(i1-i0<5) return t;
+ if(i1-i0<5) return tArr[nearestIdx(tArr,t)];
  let best=-1,bv=-1;
  for(let i=i0+1;i<i1-1;i++){const d2=Math.abs(vArr[i+1]-2*vArr[i]+vArr[i-1]); if(d2>bv){bv=d2;best=i;}}
- return best<0?t:tArr[best];
+ return best<0?tArr[nearestIdx(tArr,t)]:tArr[best];
 }
 function rangeIn(tArr,vArr,t0,t1){
  let mn=Infinity,mx=-Infinity;
@@ -417,9 +425,11 @@ function draw(){
  if(pend.e!==null){const x=X(pend.e-S);vline(x,EAG.y,EAG.h,'#e377c2',[6,3],2);
    ctx.fillStyle='#e377c2';ctx.textAlign='center';ctx.fillText('EAG 선택됨 → GRF 클릭',x,EAG.y+12);ctx.textAlign='left';}
 
- // (4) 마우스 커서 가이드
+ // (4) 마우스 커서 가이드 + 시각 표시
  if(hoverX!==null&&hoverX>=P.l&&hoverX<=P.l+W()){
-  vline(hoverX,GRF.y,GRF.h,'rgba(0,0,0,.18)');vline(hoverX,EAG.y,EAG.h,'rgba(0,0,0,.18)');}
+  vline(hoverX,GRF.y,GRF.h,'rgba(0,0,0,.18)');vline(hoverX,EAG.y,EAG.h,'rgba(0,0,0,.18)');
+  ctx.fillStyle='#333';ctx.font='11px ui-monospace,monospace';ctx.textAlign='left';
+  ctx.fillText('t='+Tinv(hoverX).toFixed(3)+'s',Math.min(hoverX+5,P.l+W()-70),GRF.y+13);}
 
  renderMeta();
 }
@@ -498,7 +508,7 @@ document.getElementById('usebest').onclick=()=>{if(!D||D.best_res===null)return;
 document.getElementById('applyin').onclick=()=>{const v=parseFloat(document.getElementById('offin').value);
  if(!D||isNaN(v))return;pairs=[];S=v-D.corrected_offset;draw();};
 document.getElementById('fit').onclick=()=>{if(!D)return;fitView();draw();};
-document.getElementById('snap').onchange=draw;
+document.getElementById('snapmode').onchange=draw;
 document.getElementById('ovl').onchange=draw;
 window.addEventListener('keydown',ev=>{
  if(ev.target.tagName==='INPUT')return;
