@@ -93,6 +93,7 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
         'cycles': [{'id': c.cycle_id, 'onset': round(c.onset_time, 3),
                     'offset': round(c.offset_time, 3), 'load': round(c.load_level, 3),
                     'step': round(c.load_step, 3),
+                    'end': round(c.end_time, 3) if np.isfinite(c.end_time) else round(c.offset_time, 3),
                     'load_pct': None if not np.isfinite(c.load_ratio) else round(c.load_pct, 1),
                     'test_side': c.test_side} for c in cycles],
         'cycle_search': cyc_info,
@@ -332,7 +333,7 @@ function draw(){ if(!D||!view)return; ctx.clearRect(0,0,cv.width,cv.height);
   ctx.fillText(t.toFixed(2),x,cv.height-M.b+13);}
  ctx.textAlign='left';ctx.fillText('time (s)  span='+(b-a).toFixed(2)+'s',M.l,cv.height-M.b+27);
  // 체중부하 cycle 구간 음영 + 번호 (프로토콜: 4회)
- (D.cycles||[]).forEach(c=>{const x1=X(c.onset),x2=X(c.offset);
+ (D.cycles||[]).forEach(c=>{const x1=X(c.onset),x2=X(c.end??c.offset);
   ctx.fillStyle='rgba(255,127,14,.07)';ctx.fillRect(x1,M.t,x2-x1,cv.height-M.t-M.b);
   ctx.fillStyle='#c26a12';ctx.font='11px sans-serif';ctx.textAlign='center';
   ctx.fillText('부하'+(c.id+1)+' (step '+c.step.toFixed(2)+')',(x1+x2)/2,M.t+12);});
@@ -421,9 +422,10 @@ document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fet
 document.getElementById('reset').onclick=async()=>{if(!D)return;await fetch(api('api/reset'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});await load();refreshList();};
 function status(t){document.getElementById('status').textContent=t;}
 function renderTbl(){const noise=new Set(D.noise_idx||[]);
+ const mt=new Map((D.events||[]).filter(e=>e.edge_idx>=0).map(e=>[e.edge_idx,'c'+(e.cycle+1)+(e.kind==='on'?'부하':'이탈')]));
  let h='<table><tr><th>id</th><th>onset</th><th>offset</th><th>amp</th><th>dir</th><th>판정</th></tr>';
  D.edges.forEach((e,k)=>{let amp=(e.offset_amp-e.onset_amp);const nz=noise.has(k);
-  h+=`<tr style="${k===sel?'background:#eef':(nz?'color:#999':'')}"><td>${k}</td><td>${e.onset_time.toFixed(2)}</td><td>${e.offset_time.toFixed(2)}</td><td>${amp.toFixed(0)}</td><td>${amp>0?'rise':'fall'}</td><td>${nz?'노이즈':'✓'}</td></tr>`;});
+  h+=`<tr style="${k===sel?'background:#eef':(nz?'color:#999':'')}"><td>${k}</td><td>${e.onset_time.toFixed(2)}</td><td>${e.offset_time.toFixed(2)}</td><td>${amp.toFixed(0)}</td><td>${amp>0?'rise':'fall'}</td><td>${nz?'노이즈':(mt.get(k)||'후보')}</td></tr>`;});
  h+='</table>';
  if(D.per_cycle&&D.per_cycle.length){
   h+='<table style="margin-left:12px"><tr><th>cycle</th><th>부하%</th><th>|amp| 부하</th><th>|amp| 이탈</th><th>대표 amp</th><th>비대칭</th><th>채택</th></tr>';

@@ -47,6 +47,7 @@ class GRFTransition:
     direction: str         # 'L->R' | 'R->L'
     from_level: float      # 전이 전 signed imbalance
     to_level: float        # 전이 후 signed imbalance
+    role: str = ''         # 'on'=부하 시작 | 'off'=이탈 (cycle에서 만든 anchor만)
 
 
 @dataclass
@@ -63,6 +64,7 @@ class LoadCycle:
     rest_level: float      # 휴식 자세 signed imbalance
     load_level: float      # 부하 구간 signed imbalance (중앙값)
     duration: float
+    end_time: float = float('nan')   # 복귀 램프까지 끝난 시각 (부하 구간 음영의 끝)
     test_side: str = ''    # 부하가 실리는(검사) 다리 'L'|'R' — 휴식 시 비어 있던 쪽
     load_ratio: float = float('nan')   # 부하 구간 평균: 검사측 / 전체 (0~1)
     rest_ratio: float = float('nan')   # 휴식 구간 기준 검사측 비율 (기저)
@@ -164,6 +166,11 @@ def detect_grf_transitions(time: np.ndarray,
 
 EXPECTED_CYCLES = 4          # 세션당 한발서기 횟수
 EXPECTED_EVENTS = 8          # = EXPECTED_CYCLES × 2 (부하 시작/종료)
+
+# 규칙: 체중부하가 실릴 때 EAG는 하강(fall), 빠질 때 상승(rise). 예외 없음.
+# 매칭은 이 방향을 만족하는 후보 중에서 고른다 (가장 가까운 것을 무조건 고르지 않는다).
+EXPECTED_DIR = {'on': 'fall', 'off': 'rise'}
+NOISE_MARGIN = 1.2           # anchor에서 이만큼(초) 넘게 떨어진 edge만 노이즈로 본다
 
 
 def find_plateaus(time: np.ndarray, signed: np.ndarray,
@@ -329,6 +336,7 @@ def detect_load_cycles(time: np.ndarray, signed: np.ndarray,
             onset_time=float(time[a]), offset_time=float(time[p1]),
             rest_level=rest, load_level=load,
             duration=float(time[p1] - time[a]),
+            end_time=float(time[b]),      # b = 휴식 레벨로 복귀가 끝난 지점
             test_side=side, load_ratio=ratio, rest_ratio=rest_r))
     return rest, cycles
 
@@ -389,19 +397,42 @@ def cycles_to_transitions(cycles: List[LoadCycle],
 
     trans: List[GRFTransition] = []
     for c in cycles:
-        for t, frm, to in ((c.onset_time, c.rest_level, c.load_level),
-                           (c.offset_time, c.load_level, c.rest_level)):
+        for role, t, frm, to in (('on', c.onset_time, c.rest_level, c.load_level),
+                                 ('off', c.offset_time, c.load_level, c.rest_level)):
             trans.append(GRFTransition(
                 trans_id=len(trans), time=snapped(t),
                 direction='R->L' if to > frm else 'L->R',
-                from_level=float(frm), to_level=float(to)))
+                from_level=float(frm), to_level=float(to), role=role))
     return trans
+
+
+def match_edge(edge_on: np.ndarray, edge_amp: np.ndarray, t: float, want: str,
+               lat_lo: float = -0.5, lat_hi: float = 1.5) -> int:
+    """anchor 시각 t에 대응하는 edge 인덱스. 방향 규칙을 만족하는 후보 중 가장 가까운 것.
+
+    '가장 가까운 edge'만 고르면 노이즈가 anchor에 더 붙어 있을 때 반대 방향 edge를
+    잘못 채택한다(부하 시작인데 rise, 이탈인데 fall). 방향을 먼저 거르고 고른다.
+    없으면 -1.
+    """
+    if not len(edge_on):
+        return -1
+    sel = np.where((edge_on - t >= lat_lo) & (edge_on - t <= lat_hi))[0]
+    if not len(sel):
+        return -1
+    if want:
+        d = np.where(edge_amp[sel] > 0, 'rise', 'fall')
+        ok = sel[d == want]
+        if len(ok):
+            return int(ok[np.argmin(np.abs(edge_on[ok] - t))])
+        return -1                      # 방향이 맞는 후보가 없으면 미매칭
+    return int(sel[np.argmin(np.abs(edge_on[sel] - t))])
 
 
 def detect_edge_near(te: np.ndarray, sig: np.ndarray, t0: float, fs: int,
                      lat_lo: float = -0.5, lat_hi: float = 1.5,
                      frac: float = 0.30, min_amp: float = 8.0,
-                     smooth_sec: float = 0.20, max_dur: float = 2.5):
+                     smooth_sec: float = 0.20, max_dur: float = 2.5,
+                     want: str = ''):
     """anchor 시각 t0 부근에서 EAG knee-pair를 국소 검출.
 
     detect_eag_edges는 전역 문턱(min_amp=25µV, slope_k)을 쓰기 때문에, 가장 가벼운
@@ -417,20 +448,35 @@ def detect_edge_near(te: np.ndarray, sig: np.ndarray, t0: float, fs: int,
         return None
     sm = _smooth(sig, max(1, int(smooth_sec * fs)))
     slope = np.gradient(sm) * fs
-    k = i0 + int(np.argmax(np.abs(slope[i0:i1])))
+    # 방향 규칙이 주어지면 그 부호의 기울기 중에서 찾는다. 그러지 않으면 창 안에서
+    # 가장 가파른 지점이 반대 방향일 때 엉뚱한 knee를 만들어낸다.
+    seg = slope[i0:i1]
+    if want == 'fall':
+        k = i0 + int(np.argmin(seg))
+        if slope[k] >= 0:
+            return None
+    elif want == 'rise':
+        k = i0 + int(np.argmax(seg))
+        if slope[k] <= 0:
+            return None
+    else:
+        k = i0 + int(np.argmax(np.abs(seg)))
     peak = abs(slope[k])
     if peak <= 0:
         return None
     thr = frac * peak
+    sgn = np.sign(slope[k])
     lim = int(max_dur * fs)
     a = k
-    while a > 0 and abs(slope[a - 1]) > thr and k - a < lim:
+    while a > 0 and np.sign(slope[a - 1]) == sgn and abs(slope[a - 1]) > thr and k - a < lim:
         a -= 1
     b = k
-    while b < len(slope) - 1 and abs(slope[b + 1]) > thr and b - k < lim:
+    while b < len(slope) - 1 and np.sign(slope[b + 1]) == sgn and abs(slope[b + 1]) > thr and b - k < lim:
         b += 1
     amp = float(sm[b] - sm[a])
     if abs(amp) < min_amp:
+        return None
+    if want and ((want == 'rise') != (amp > 0)):
         return None
     return (float(te[a]), float(sm[a]), amp, float(te[b]), float(sm[b]))
 
@@ -447,12 +493,12 @@ def detect_eag_edges_protocol(te: np.ndarray, sig: np.ndarray,
     """
     edges = list(detect_eag_edges(te, sig, fs=fs, **kw))
     for tr in anchors:
+        want = EXPECTED_DIR.get(tr.role, '')
         e_on = np.array([e[0] for e in edges]) if edges else np.array([])
-        if len(e_on):
-            sel = np.where((e_on - tr.time >= lat_lo) & (e_on - tr.time <= lat_hi))[0]
-            if len(sel):
-                continue                       # 이미 매칭됨
-        got = detect_edge_near(te, sig, tr.time, fs, lat_lo, lat_hi)
+        e_amp = np.array([e[2] for e in edges]) if edges else np.array([])
+        if match_edge(e_on, e_amp, tr.time, want, lat_lo, lat_hi) >= 0:
+            continue                           # 방향까지 맞는 edge가 이미 있음
+        got = detect_edge_near(te, sig, tr.time, fs, lat_lo, lat_hi, want=want)
         if got is not None:
             edges.append(got)
     edges.sort(key=lambda e: e[0])
@@ -477,13 +523,10 @@ def validate_cycle_edges(cycles: List[LoadCycle], edge_on: np.ndarray,
     anchors = cycles_to_transitions(cycles, raw_trans)
     events, dirs = [], []
     for i, tr in enumerate(anchors):
-        kind = 'on' if i % 2 == 0 else 'off'
+        kind = tr.role or ('on' if i % 2 == 0 else 'off')
         t = tr.time
-        k = -1
-        if len(edge_on):
-            sel = np.where((edge_on - t >= lat_lo) & (edge_on - t <= lat_hi))[0]
-            if len(sel):
-                k = int(sel[np.argmin(np.abs(edge_on[sel] - t))])
+        # 방향 규칙(부하=fall, 이탈=rise)을 만족하는 후보 중 가장 가까운 것
+        k = match_edge(edge_on, edge_amp, t, EXPECTED_DIR[kind], lat_lo, lat_hi)
         d = '' if k < 0 else ('rise' if edge_amp[k] > 0 else 'fall')
         events.append({'cycle': i // 2, 'kind': kind, 'grf_time': float(t),
                        'edge_idx': k, 'direction': d,
@@ -492,23 +535,7 @@ def validate_cycle_edges(cycles: List[LoadCycle], edge_on: np.ndarray,
 
     n_match = sum(1 for e in events if e['edge_idx'] >= 0)
 
-    # 채널의 정상 방향 규약: 방향이 서로 반대로 잘 나온 cycle들의 다수결.
-    # (부하 시작에 fall, 이탈에 rise가 일반적이나 채널/피험자에 따라 뒤집힐 수 있어
-    #  하드코딩하지 않고 그 채널 자체의 합의를 쓴다.)
-    def _role_dirs():
-        pairs = []
-        for c in cycles:
-            ev = [e for e in events if e['cycle'] == c.cycle_id]
-            on = next((e for e in ev if e['kind'] == 'on' and e['edge_idx'] >= 0), None)
-            of = next((e for e in ev if e['kind'] == 'off' and e['edge_idx'] >= 0), None)
-            if on and of and on['direction'] != of['direction']:
-                pairs.append(on['direction'])
-        if pairs:
-            on_d = max(set(pairs), key=pairs.count)
-            return on_d, ('rise' if on_d == 'fall' else 'fall')
-        return 'fall', 'rise'          # 합의가 없으면 통상 규약
-
-    exp_on, exp_off = _role_dirs()
+    exp_on, exp_off = EXPECTED_DIR['on'], EXPECTED_DIR['off']
 
     # cycle별 요약: 같은 부하의 rise/fall은 크기가 거의 같아야 하므로, 한쪽만 살아 있어도
     # 그 부하에서의 EAG 크기를 추정할 수 있다 → cycle은 "이벤트 ≥1개"면 측정 가능으로 본다.
@@ -579,9 +606,17 @@ def validate_cycle_edges(cycles: List[LoadCycle], edge_on: np.ndarray,
     if dup < n_match:
         reasons.append('한 edge가 두 이벤트에 중복 매칭')
 
-    # anchor 근처가 아닌 edge = 노이즈 후보 (부하 구간 한가운데·휴식 구간에서 검출된 것)
+    # 노이즈 후보 = anchor에서 NOISE_MARGIN 넘게 떨어진 edge (부하/휴식 구간 '한가운데').
+    # 매칭이 안 됐다는 이유만으로 지우면 경계에서 조금 벗어난 진짜 반응까지 사라진다.
     matched_idx = {e['edge_idx'] for e in events if e['edge_idx'] >= 0}
-    noise = [i for i in range(len(edge_on)) if i not in matched_idx]
+    at = np.array([tr.time for tr in anchors]) if anchors else np.array([])
+    noise = []
+    for i in range(len(edge_on)):
+        if i in matched_idx:
+            continue
+        if len(at) and np.min(np.abs(at - edge_on[i])) <= NOISE_MARGIN:
+            continue                      # 경계 근처 → 노이즈로 단정하지 않음
+        noise.append(i)
 
     n_single = sum(1 for p in per_cycle if p['single_sided'])
     # priority: high = 사람이 봐야 함(측정 불가/cycle 수 이상) · low = 자동 채택했으니 후순위
@@ -917,11 +952,7 @@ def label_single_sided(df):
             if r.get('cycle_id') is None or not r.get('matched', False):
                 continue
             pairs.setdefault(r['cycle_id'], {})[r['event_kind']] = r
-        votes = [v['on']['eag_direction'] for v in pairs.values()
-                 if 'on' in v and 'off' in v
-                 and v['on']['eag_direction'] != v['off']['eag_direction']]
-        exp_on = max(set(votes), key=votes.count) if votes else 'fall'
-        exp_off = 'rise' if exp_on == 'fall' else 'fall'
+        exp_on, exp_off = EXPECTED_DIR['on'], EXPECTED_DIR['off']
         for cid, v in pairs.items():
             if 'on' not in v or 'off' not in v:
                 if len(v) == 1:
@@ -995,9 +1026,11 @@ def extract_responses(sa: SyncAnalyzer, trans: List[GRFTransition],
             on_t = on_a = off_t = off_a = amp = tt = slope = lat = np.nan
             eag_dir = ''
             if len(e_on):
-                sel = np.where((e_on - tr.time >= lat_lo) & (e_on - tr.time <= lat_hi))[0]
-                if len(sel):
-                    k = sel[np.argmin(np.abs(e_on[sel] - tr.time))]  # 가장 가까운(동시)
+                e_amp_arr = np.array([e[2] for e in edges_c])
+                # anchor에 role이 있으면(프로토콜 anchor) 방향 규칙을 지켜 고른다
+                k = match_edge(e_on, e_amp_arr, tr.time,
+                               EXPECTED_DIR.get(tr.role, ''), lat_lo, lat_hi)
+                if k >= 0:
                     on_t, on_a, amp, off_t, off_a = edges_c[k]
                     tt = off_t - on_t
                     slope = amp / max(1e-6, tt)
