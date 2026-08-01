@@ -301,6 +301,9 @@ function calcYR(){let[a,b]=xr(),i0=nearestIdx(a),i1=nearestIdx(b),mn=Infinity,mx
 function eagYR(){return _yr||(_yr=calcYR());}
 function X(t){let[a,b]=xr();return M.l+(t-a)/(b-a)*PW();}
 function Tinv(px){let[a,b]=xr();return a+(px-M.l)/PW()*(b-a);}
+function vline(x,y0,h,color,dash,lw){
+ ctx.save();ctx.strokeStyle=color;ctx.lineWidth=lw||1;if(dash)ctx.setLineDash(dash);
+ ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y0+h);ctx.stroke();ctx.restore();}
 function eagH(){return cv.height-M.t-M.b-GH;}
 function EY(v){let[a,b]=eagYR();return M.t+(b-v)/(b-a)*eagH();}
 function ampAt(t){let i=nearestIdx(t);return D.eag[i];}
