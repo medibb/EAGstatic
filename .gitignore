@@ -44,6 +44,9 @@ results/
 # Claude Code local settings
 .claude/
 
+# 인증·권한·서비스 세팅 메모 (로컬 전용, 절대 커밋 금지)
+AUTH_SETUP.md
+
 # Research documents (large binaries, kept on disk only)
 인바디/
 핵심연구/
