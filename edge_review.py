@@ -81,6 +81,8 @@ def diagnose_session(session_dir: str, channels=None) -> list:
             'n_cycles': v['n_cycles'], 'n_matched': v['n_matched'],
             'n_events': v['n_events'], 'n_edges': v['n_edges'],
             'n_measured_cycles': v['n_measured_cycles'],
+            'priority': v['priority'], 'labels': v['labels'],
+            'n_single_sided': v['n_single_sided'],
             'load_pct': ';'.join('' if p['load_pct'] is None else f"{p['load_pct']:.0f}"
                                  for p in v['per_cycle']),
             'amp': ';'.join('' if p['amp'] is None else f"{p['amp']:.0f}"
@@ -118,7 +120,11 @@ def scan(base_dir: str, only_bad: bool = True):
 
     df = pd.DataFrame(all_rows)
     REVIEW_DIR.mkdir(parents=True, exist_ok=True)
-    out = df[~df['ok']] if only_bad else df
+    # worklist: 사람이 봐야 하는 것(priority=high) 먼저, 자동 채택된 것(low)은 후순위
+    order = {'high': 0, 'low': 1, '': 2}
+    df['_p'] = df['priority'].map(lambda x: order.get(x, 2))
+    df = df.sort_values(['_p', 'subject', 'session', 'channel']).drop(columns='_p')
+    out = df[df['priority'] != ''] if only_bad else df
     out.to_csv(WORKLIST, index=False)
     df.to_csv(REVIEW_DIR / 'all_channels.csv', index=False)
 
@@ -126,6 +132,9 @@ def scan(base_dir: str, only_bad: bool = True):
     print(f"\n=== 결과 ===")
     print(f"  세션 {len(ses)}개 · 채널 {len(df)}개")
     print(f"  통과 채널 {int(df['ok'].sum())} / {len(df)}  ({df['ok'].mean():.0%})")
+    pc = df['priority'].value_counts()
+    print(f"  검토 우선순위: high(사람 필요) {pc.get('high',0)} · "
+          f"low(한쪽만 자동채택→후순위) {pc.get('low',0)} · 없음 {pc.get('',0)}")
     print(f"  전 채널 통과 세션 {(ses['sum'] == ses['count']).sum()} / {len(ses)}")
     if len(df):
         cyc = df[df['channel'] == 1]['n_cycles'].value_counts().sort_index()

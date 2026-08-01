@@ -101,7 +101,8 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
         'anchors': [{'t': round(a.time, 3), 'kind': 'on' if i % 2 == 0 else 'off',
                      'cycle': i // 2} for i, a in enumerate(anchors)],
         'valid': {k: valid[k] for k in ('ok', 'n_cycles', 'n_matched', 'n_events',
-                                        'n_edges', 'n_measured_cycles', 'reasons')},
+                                        'n_edges', 'n_measured_cycles', 'reasons',
+                                        'priority', 'labels', 'n_single_sided')},
         'events': valid['events'],
         'expected_cycles': G.EXPECTED_CYCLES, 'expected_events': G.EXPECTED_EVENTS,
         'te': r3(_ds(te, step)), 'eag': r1(_ds(eag, step)),
@@ -258,7 +259,7 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  table{border-collapse:collapse;font-size:12px;margin-top:6px}
  td,th{border:1px solid #ddd;padding:2px 6px}
  #meta{font-size:13px;margin:6px 0;line-height:1.6}
- .ok{color:#2ca02c}.bad{color:#d62728}
+ .ok{color:#2ca02c}.bad{color:#d62728}.warn{color:#c26a12}
 </style></head><body>
 <div id="bar">
  <select id="wl" title="세션 목록" style="max-width:440px"></select>
@@ -407,7 +408,9 @@ async function load(){let s=document.getElementById('sess').value,ch=document.ge
  const v=D.valid||{};
  document.getElementById('meta').innerHTML=
   `${D.subject}/${D.session} ch${D.channel} · source=${D.source} · offset corr=${D.corrected_offset} (${D.method})`+
-  `<br><b class="${v.ok?'ok':'bad'}">${v.ok?'✅ 프로토콜 충족':'⚠️ 검토 필요'}</b>`+
+  `<br><b class="${v.priority==='high'?'bad':(v.priority==='low'?'warn':'ok')}">`+
+  `${v.priority==='high'?'⚠️ 검토 필요':(v.priority==='low'?'🟡 후순위 검토(한쪽만 채택)':'✅ 프로토콜 충족')}</b>`+
+  (v.labels?` <span class="warn">${v.labels}</span>`:'')+
   ` — cycle ${v.n_cycles}/${D.expected_cycles} · 측정가능 cycle ${v.n_measured_cycles}/${v.n_cycles}`+
   ` · 이벤트 ${v.n_matched}/${v.n_events} · edge ${v.n_edges}개`+
   ((D.noise_idx||[]).length?` · <span class="bad">노이즈 후보 ${D.noise_idx.length}개</span>`:'')+
@@ -423,9 +426,10 @@ function renderTbl(){const noise=new Set(D.noise_idx||[]);
   h+=`<tr style="${k===sel?'background:#eef':(nz?'color:#999':'')}"><td>${k}</td><td>${e.onset_time.toFixed(2)}</td><td>${e.offset_time.toFixed(2)}</td><td>${amp.toFixed(0)}</td><td>${amp>0?'rise':'fall'}</td><td>${nz?'노이즈':'✓'}</td></tr>`;});
  h+='</table>';
  if(D.per_cycle&&D.per_cycle.length){
-  h+='<table style="margin-left:12px"><tr><th>cycle</th><th>부하%</th><th>|amp| 부하</th><th>|amp| 이탈</th><th>대표 amp</th><th>비대칭</th></tr>';
+  h+='<table style="margin-left:12px"><tr><th>cycle</th><th>부하%</th><th>|amp| 부하</th><th>|amp| 이탈</th><th>대표 amp</th><th>비대칭</th><th>채택</th></tr>';
   D.per_cycle.forEach(p=>{const bad=p.n_events===0;
-   h+=`<tr style="${bad?'color:#d62728':''}"><td>c${p.cycle+1}</td><td>${p.load_pct??'-'}</td><td>${p.amp_on??'-'}</td><td>${p.amp_off??'-'}</td><td><b>${p.amp??'측정불가'}</b></td><td>${p.asymmetry??'-'}</td></tr>`;});
+   const st=p.amp==null?'측정불가':(p.accepted==='both'?'양측':(p.accepted==='on'?'부하만':'이탈만'));
+   h+=`<tr style="${bad?'color:#d62728':(p.single_sided?'color:#c26a12':'')}"><td>c${p.cycle+1}</td><td>${p.load_pct??'-'}</td><td>${p.amp_on??'-'}</td><td>${p.amp_off??'-'}</td><td><b>${p.amp??'-'}</b></td><td>${p.asymmetry??'-'}</td><td>${st}</td></tr>`;});
   h+='</table>';}
  document.getElementById('tbl').innerHTML='<div style="display:flex;gap:14px;align-items:flex-start">'+h+'</div>';}
 // 세션 드롭다운 — worklist(needs_review)만이 아니라 data/ 아래 전체 세션.

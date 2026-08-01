@@ -927,6 +927,8 @@ def process_single_session(pair: SessionPair, output_dir: Path, do_phase2: bool 
                     lambda i: round(_cyc_of[i].load_pct, 1) if i in _cyc_of else None)
                 grf_triggered_df['test_side'] = grf_triggered_df['trans_id'].map(
                     lambda i: _cyc_of[i].test_side if i in _cyc_of else '')
+                # 부하/이탈 방향이 같으면 한쪽만 자동 채택하고 그 사실을 라벨로 남긴다
+                grf_triggered_df = _G.label_single_sided(grf_triggered_df)
 
         sa.run_analysis()
 

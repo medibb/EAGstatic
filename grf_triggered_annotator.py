@@ -492,6 +492,24 @@ def validate_cycle_edges(cycles: List[LoadCycle], edge_on: np.ndarray,
 
     n_match = sum(1 for e in events if e['edge_idx'] >= 0)
 
+    # 채널의 정상 방향 규약: 방향이 서로 반대로 잘 나온 cycle들의 다수결.
+    # (부하 시작에 fall, 이탈에 rise가 일반적이나 채널/피험자에 따라 뒤집힐 수 있어
+    #  하드코딩하지 않고 그 채널 자체의 합의를 쓴다.)
+    def _role_dirs():
+        pairs = []
+        for c in cycles:
+            ev = [e for e in events if e['cycle'] == c.cycle_id]
+            on = next((e for e in ev if e['kind'] == 'on' and e['edge_idx'] >= 0), None)
+            of = next((e for e in ev if e['kind'] == 'off' and e['edge_idx'] >= 0), None)
+            if on and of and on['direction'] != of['direction']:
+                pairs.append(on['direction'])
+        if pairs:
+            on_d = max(set(pairs), key=pairs.count)
+            return on_d, ('rise' if on_d == 'fall' else 'fall')
+        return 'fall', 'rise'          # 합의가 없으면 통상 규약
+
+    exp_on, exp_off = _role_dirs()
+
     # cycle별 요약: 같은 부하의 rise/fall은 크기가 거의 같아야 하므로, 한쪽만 살아 있어도
     # 그 부하에서의 EAG 크기를 추정할 수 있다 → cycle은 "이벤트 ≥1개"면 측정 가능으로 본다.
     per_cycle = []
@@ -502,27 +520,60 @@ def validate_cycle_edges(cycles: List[LoadCycle], edge_on: np.ndarray,
         a_on = abs(float(edge_amp[on_e['edge_idx']])) if on_e else float('nan')
         a_off = abs(float(edge_amp[off_e['edge_idx']])) if off_e else float('nan')
         both = on_e is not None and off_e is not None
-        amps = [a for a in (a_on, a_off) if np.isfinite(a)]
         asym = (abs(a_on - a_off) / max(1e-9, (a_on + a_off) / 2)) if both else float('nan')
         opposite = (both and on_e['direction'] != off_e['direction'])
+
+        # 부하/이탈 방향이 같으면 한쪽이 노이즈에 오염된 것. 그 채널의 방향 규약에
+        # 맞는 쪽을 자동 채택하고 반대쪽은 폐기하되, '한쪽만 채택'으로 라벨링한다
+        # (같은 부하의 rise/fall 크기는 거의 같으므로 한쪽만으로도 크기 추정 가능).
+        accepted, dropped = 'both', ''
+        if both and not opposite:
+            d = on_e['direction']
+            if d == exp_on:
+                accepted, dropped = 'on', 'off'
+            elif d == exp_off:
+                accepted, dropped = 'off', 'on'
+            else:
+                accepted, dropped = ('on', 'off') if a_on >= a_off else ('off', 'on')
+        elif both:
+            accepted = 'both'
+        elif on_e is not None:
+            accepted, dropped = 'on', ''
+        elif off_e is not None:
+            accepted, dropped = 'off', ''
+        else:
+            accepted = 'none'
+
+        use = {'both': [a for a in (a_on, a_off) if np.isfinite(a)],
+               'on': [a_on] if np.isfinite(a_on) else [],
+               'off': [a_off] if np.isfinite(a_off) else [],
+               'none': []}[accepted]
         per_cycle.append({
-            'cycle': c.cycle_id, 'n_events': len(amps),
+            'cycle': c.cycle_id, 'n_events': int(np.isfinite(a_on)) + int(np.isfinite(a_off)),
             'amp_on': None if not np.isfinite(a_on) else round(a_on, 1),
             'amp_off': None if not np.isfinite(a_off) else round(a_off, 1),
-            'amp': None if not amps else round(float(np.mean(amps)), 1),
+            'amp': None if not use else round(float(np.mean(use)), 1),
             'asymmetry': None if not np.isfinite(asym) else round(asym, 3),
             'opposite_dir': bool(opposite) if both else None,
+            'accepted': accepted, 'dropped': dropped,
+            'single_sided': accepted in ('on', 'off'),
             'load_pct': None if not np.isfinite(c.load_ratio) else round(c.load_pct, 1),
         })
 
-    n_measured = sum(1 for p in per_cycle if p['n_events'] >= 1)
+    n_measured = sum(1 for p in per_cycle if p['amp'] is not None)
     if cycles and n_measured < len(cycles):
-        miss = [f"c{p['cycle']+1}" for p in per_cycle if p['n_events'] == 0]
+        miss = [f"c{p['cycle']+1}" for p in per_cycle if p['amp'] is None]
         reasons.append(f'측정 불가 cycle {len(cycles)-n_measured}개({",".join(miss)})')
 
-    bad_dir = [f"c{p['cycle']+1}" for p in per_cycle if p['opposite_dir'] is False]
-    if bad_dir:
-        reasons.append(f'부하/이탈 방향 같음({",".join(bad_dir)})')
+    # 방향이 같아 한쪽을 폐기한 cycle: 실패가 아니라 '후순위 검토' 라벨
+    auto = [p for p in per_cycle if p['opposite_dir'] is False]
+    labels = []
+    if auto:
+        labels.append('한쪽만 채택(' + ','.join(
+            f"c{p['cycle']+1}:{'부하' if p['accepted']=='on' else '이탈'}" for p in auto) + ')')
+    only1 = [p for p in per_cycle if p['single_sided'] and p['opposite_dir'] is None]
+    if only1:
+        labels.append('단측 측정(' + ','.join(f"c{p['cycle']+1}" for p in only1) + ')')
 
     dup = len(set(e['edge_idx'] for e in events if e['edge_idx'] >= 0))
     if dup < n_match:
@@ -532,10 +583,15 @@ def validate_cycle_edges(cycles: List[LoadCycle], edge_on: np.ndarray,
     matched_idx = {e['edge_idx'] for e in events if e['edge_idx'] >= 0}
     noise = [i for i in range(len(edge_on)) if i not in matched_idx]
 
+    n_single = sum(1 for p in per_cycle if p['single_sided'])
+    # priority: high = 사람이 봐야 함(측정 불가/cycle 수 이상) · low = 자동 채택했으니 후순위
+    priority = 'high' if reasons else ('low' if n_single else '')
     return {'ok': not reasons, 'n_cycles': len(cycles), 'n_matched': n_match,
             'n_events': len(events), 'n_edges': int(len(edge_on)),
             'n_measured_cycles': n_measured, 'per_cycle': per_cycle,
-            'noise_idx': noise,
+            'noise_idx': noise, 'n_single_sided': n_single,
+            'priority': priority, 'labels': '; '.join(labels),
+            'expected_dirs': {'on': exp_on, 'off': exp_off},
             'reasons': '; '.join(reasons), 'events': events}
 
 
@@ -837,6 +893,54 @@ def compute_offset(sa: SyncAnalyzer, ref_ch: int = 0,
                        needs_review=needs_review, review_reason='; '.join(reasons),
                        profile_margin=margin)
     return off, trans, signed, grf_t
+
+
+def label_single_sided(df):
+    """grf_triggered 결과표에 '한쪽만 채택' 라벨을 붙인다 (파라미터 단계).
+
+    같은 cycle의 부하/이탈 방향이 같으면 한쪽이 노이즈에 오염된 것이므로, 그 채널의
+    방향 규약(정상 cycle들의 다수결)에 맞는 쪽만 채택하고 반대쪽은 accepted=False로
+    표시한다. 값은 살리되 '한쪽만 썼다'는 사실이 남아 후순위 검토가 가능하다.
+
+    필요 컬럼: channel, cycle_id, event_kind, eag_direction, amplitude, matched
+    추가 컬럼: accepted(bool) · single_sided(bool) · review_priority('' | 'low')
+    """
+    if df is None or not len(df) or 'cycle_id' not in df.columns:
+        return df
+    df = df.copy()
+    df['accepted'] = df.get('matched', True).astype(bool)
+    df['single_sided'] = False
+    df['review_priority'] = ''
+    for ch, g in df.groupby('channel'):
+        pairs = {}
+        for _, r in g.iterrows():
+            if r.get('cycle_id') is None or not r.get('matched', False):
+                continue
+            pairs.setdefault(r['cycle_id'], {})[r['event_kind']] = r
+        votes = [v['on']['eag_direction'] for v in pairs.values()
+                 if 'on' in v and 'off' in v
+                 and v['on']['eag_direction'] != v['off']['eag_direction']]
+        exp_on = max(set(votes), key=votes.count) if votes else 'fall'
+        exp_off = 'rise' if exp_on == 'fall' else 'fall'
+        for cid, v in pairs.items():
+            if 'on' not in v or 'off' not in v:
+                if len(v) == 1:
+                    df.loc[(df.channel == ch) & (df.cycle_id == cid), 'single_sided'] = True
+                    df.loc[(df.channel == ch) & (df.cycle_id == cid), 'review_priority'] = 'low'
+                continue
+            if v['on']['eag_direction'] == v['off']['eag_direction']:
+                d = v['on']['eag_direction']
+                if d == exp_on:      keep, drop = 'on', 'off'
+                elif d == exp_off:   keep, drop = 'off', 'on'
+                else:
+                    keep, drop = (('on', 'off')
+                                  if abs(v['on']['amplitude']) >= abs(v['off']['amplitude'])
+                                  else ('off', 'on'))
+                m = (df.channel == ch) & (df.cycle_id == cid)
+                df.loc[m & (df.event_kind == drop), 'accepted'] = False
+                df.loc[m, 'single_sided'] = True
+                df.loc[m, 'review_priority'] = 'low'
+    return df
 
 
 def annotate_session(session_dir: str,
