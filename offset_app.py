@@ -218,7 +218,7 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(ln) or b'{}')
             if u.path == '/api/save':
                 set_manual_offset(payload['subject'], payload['session'],
-                                  float(payload['offset']),
+                                  round(float(payload['offset']), 4),
                                   auto_offset=float(payload.get('auto_offset', 0.0)),
                                   auto_method=str(payload.get('method', '')),
                                   note=payload.get('note', 'gui point-pick'))
@@ -255,7 +255,13 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 </style></head><body>
 
 <div id="bar">
- <select id="sesslist" style="max-width:520px"></select>
+ <select id="sesslist" style="max-width:480px"></select>
+ <select id="filter" title="목록 필터">
+  <option value="all" selected>전체</option>
+  <option value="review">검토대상 ▲</option>
+  <option value="done">확정 ✅</option>
+  <option value="todo">미확정</option>
+ </select>
  <input id="sess" placeholder="세션 디렉터리 직접 입력" size="40">
  <label>ch <input id="ch" type="number" value="1" min="1" max="8" style="width:44px"></label>
  <button id="load">Load</button>
@@ -556,20 +562,28 @@ document.getElementById('clearman').onclick=async()=>{
  await load(); refreshList();
 };
 
-function refreshList(){
- fetch(api('api/sessions')).then(r=>r.json()).then(rows=>{
-  const sel=document.getElementById('sesslist');
-  const cur=document.getElementById('sess').value;
-  sel.innerHTML='<option value="">— 세션 선택 (검토대상 ▲ 우선) —</option>';
-  rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
-   o.textContent=(x.in_worklist?'▲ ':'   ')+x.subject+' / '+x.session+
-    (x.manual!=null?'  [manual '+Number(x.manual).toFixed(2)+']':'')+
-    (x.reason?'  · '+x.reason:'');
-   sel.appendChild(o);});
-  sel.value=cur;
-  sel.onchange=()=>{if(sel.value){document.getElementById('sess').value=sel.value;load();}};
- });
+let SESSIONS=[];
+function renderList(){
+ const sel=document.getElementById('sesslist'), f=document.getElementById('filter').value;
+ const cur=document.getElementById('sess').value;
+ const keep=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?x.manual!=null : x.manual==null;
+ const rows=SESSIONS.filter(keep), nDone=SESSIONS.filter(x=>x.manual!=null).length;
+ sel.innerHTML=`<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · 확정 ${nDone}) —</option>`;
+ rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
+  o.textContent=(x.manual!=null?'✅ ':x.in_worklist?'▲ ':'　 ')+x.subject+' / '+x.session+
+   (x.manual!=null?`  [확정 ${Number(x.manual)>=0?'+':''}${Number(x.manual).toFixed(2)}s]`:'')+
+   (x.reason?'  · '+x.reason:'');
+  sel.appendChild(o);});
+ sel.value=cur;                      // 현재 세션이 필터에서 빠지면 빈 값이 되지만 #sess는 유지됨
 }
+function refreshList(){
+ return fetch(api('api/sessions')).then(r=>r.json()).then(rows=>{SESSIONS=rows;renderList();});
+}
+document.getElementById('filter').onchange=renderList;
+document.getElementById('sesslist').onchange=()=>{
+ const v=document.getElementById('sesslist').value;
+ if(v){document.getElementById('sess').value=v;load();}
+};
 refreshList();
 </script></body></html>"""
 

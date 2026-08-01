@@ -109,6 +109,37 @@ def find_session_dir(subject: str, session: str) -> str:
     return ''
 
 
+def session_index() -> list:
+    """드롭다운용: 전체 세션 + worklist 사유 + 수동 edge 채널 + 수동 offset 확정 여부.
+
+    worklist(needs_review)만이 아니라 data/ 아래 모든 세션을 대상으로 한다.
+    edge가 이미 확정된 세션은 채널 목록과 edge 수를 함께 돌려준다.
+    """
+    from offset_app import scan_sessions          # 세션 스캔(파일명 기반, 가벼움) 공유
+    from offset_manager import list_all_offsets
+
+    wl = {(r['subject'], r['session']): r['reason'] for r in load_worklist()}
+    ed = {}
+    for r in edge_store.list_all():
+        ed.setdefault((r['subject'], r['session']), []).append(
+            (int(r['channel']), int(r['n_edges'])))
+    off = {(r['subject'], r['session']): r.get('manual_offset')
+           for r in list_all_offsets()}
+
+    rows = []
+    for r in scan_sessions():
+        key = (r['subject'], r['session'])
+        chans = sorted(ed.get(key, []))
+        rows.append({**r,
+                     'reason': wl.get(key, ''), 'in_worklist': key in wl,
+                     'edge_channels': [c for c, _ in chans],
+                     'edge_counts': [n for _, n in chans],
+                     'manual_offset': off.get(key)})
+    # 검토 대상 먼저, 그다음 피험자/세션 순
+    rows.sort(key=lambda r: (not r['in_worklist'], r['subject'], r['session']))
+    return rows
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -129,6 +160,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, HTML, 'text/html; charset=utf-8')
             if u.path == '/api/worklist':
                 return self._send(200, json.dumps(load_worklist()))
+            if u.path == '/api/sessions':
+                return self._send(200, json.dumps(session_index(), ensure_ascii=False))
             if u.path == '/api/data':
                 sdir = q.get('session', [''])[0]
                 if not sdir and q.get('subject'):
@@ -176,8 +209,14 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  td,th{border:1px solid #ddd;padding:2px 6px}
 </style></head><body>
 <div id="bar">
- <select id="wl" title="needs_review worklist"></select>
- <input id="sess" placeholder="session dir (또는 worklist 선택)" size="42">
+ <select id="wl" title="세션 목록" style="max-width:440px"></select>
+ <select id="filter" title="목록 필터">
+  <option value="all" selected>전체</option>
+  <option value="review">검토대상 ▲</option>
+  <option value="done">edge 확정 ✅</option>
+  <option value="todo">edge 미확정</option>
+ </select>
+ <input id="sess" placeholder="session dir (또는 목록 선택)" size="30">
  <label>ch <input id="ch" type="number" value="1" min="1" max="8" style="width:44px"></label>
  <button id="load">Load</button>
  <button id="addmode">Add mode</button>
@@ -287,16 +326,35 @@ async function load(){let s=document.getElementById('sess').value,ch=document.ge
  let j=await res.json(); if(j.error){status('ERR: '+j.error);return;} D=j;sel=-1;addPts=[];setAdd(false);fitView();
  document.getElementById('meta').textContent=`${D.subject}/${D.session} ch${D.channel} · source=${D.source} · offset corr=${D.corrected_offset} (${D.method})`;
  status('loaded '+D.edges.length+' edges');draw();}
-document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch(api('api/save'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();status(j.ok?('saved '+j.n+' edges'):('ERR '+j.error));};
-document.getElementById('reset').onclick=async()=>{if(!D)return;await fetch(api('api/reset'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});load();};
+document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch(api('api/save'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();status(j.ok?('✅ saved '+j.n+' edges'):('ERR '+j.error));if(j.ok)refreshList();};
+document.getElementById('reset').onclick=async()=>{if(!D)return;await fetch(api('api/reset'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});await load();refreshList();};
 function status(t){document.getElementById('status').textContent=t;}
 function renderTbl(){let h='<table><tr><th>id</th><th>onset</th><th>offset</th><th>amp</th><th>dir</th></tr>';
  D.edges.forEach((e,k)=>{let amp=(e.offset_amp-e.onset_amp);h+=`<tr style="${k===sel?'background:#eef':''}"><td>${k}</td><td>${e.onset_time.toFixed(2)}</td><td>${e.offset_time.toFixed(2)}</td><td>${amp.toFixed(0)}</td><td>${amp>0?'rise':'fall'}</td></tr>`;});
  document.getElementById('tbl').innerHTML=h+'</table>';}
-// worklist dropdown
-fetch(api('api/worklist')).then(r=>r.json()).then(w=>{let sel=document.getElementById('wl');sel.innerHTML='<option value="">— worklist —</option>';
- w.forEach(x=>{let o=document.createElement('option');o.value=JSON.stringify(x);o.textContent=`${x.subject} ${x.session} · ${x.reason}`.slice(0,70);sel.appendChild(o);});
- sel.onchange=async()=>{if(!sel.value)return;let x=JSON.parse(sel.value);let r=await fetch(api('api/finddir?subject='+encodeURIComponent(x.subject)+'&session_name='+encodeURIComponent(x.session)));let j=await r.json();document.getElementById('sess').value=j.dir;};});
+// 세션 드롭다운 — worklist(needs_review)만이 아니라 data/ 아래 전체 세션.
+// edge가 확정된 세션은 ✅와 채널 목록, offset 확정 세션은 off✅ 로 표시.
+let SESSIONS=[];
+function renderList(){
+ const sel=document.getElementById('wl'), f=document.getElementById('filter').value;
+ const cur=document.getElementById('sess').value;
+ const done=x=>x.edge_channels.length>0;
+ const keep=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?done(x) : !done(x);
+ const rows=SESSIONS.filter(keep), nDone=SESSIONS.filter(done).length;
+ sel.innerHTML=`<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · edge확정 ${nDone}) —</option>`;
+ rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
+  o.textContent=(done(x)?'✅ ':x.in_worklist?'▲ ':'　 ')+x.subject+' / '+x.session+
+   (done(x)?'  [edge ch'+x.edge_channels.join(',')+' · '+x.edge_counts.reduce((a,b)=>a+b,0)+'개]':'')+
+   (x.manual_offset!=null?'  [off✅]':'')+
+   (x.reason?'  · '+x.reason:'');
+  sel.appendChild(o);});
+ sel.value=cur;
+}
+function refreshList(){return fetch(api('api/sessions')).then(r=>r.json()).then(rows=>{SESSIONS=rows;renderList();});}
+document.getElementById('filter').onchange=renderList;
+document.getElementById('wl').onchange=()=>{const v=document.getElementById('wl').value;
+ if(v){document.getElementById('sess').value=v;load();}};
+refreshList();
 </script></body></html>"""
 
 
