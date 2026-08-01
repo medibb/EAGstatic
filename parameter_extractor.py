@@ -899,10 +899,22 @@ def process_single_session(pair: SessionPair, output_dir: Path, do_phase2: bool 
         grf_triggered_df = None
         if do_grf_triggered:
             te_corr = sa.unified_time_eag  # 이미 corrected offset 적용됨
-            gt_resp = extract_responses(sa, trans, te_corr, list(range(1, EEG_CHANNELS + 1)))
+            # 프로토콜(한발서기 4회 × 부하 시작/종료 = 8 이벤트)만 anchor로 쓴다.
+            # 발구름·전후 양발 서기가 파라미터에 섞이지 않고, detect_grf_transitions가
+            # 진폭 문턱 때문에 놓치던 가장 가벼운 단계도 포함된다.
+            # cycle이 기대치(4회)와 다르면 검토 대상이므로 기존 전이를 그대로 쓴다
+            # (edge_review.py --dir data 로 그런 세션을 추린다).
+            import grf_triggered_annotator as _G
+            _signed_c = _G.signed_imbalance(sa.grf_left, sa.grf_right)
+            _rest, _cycles = _G.detect_load_cycles(sa.unified_time_grf, _signed_c)
+            anchors = (_G.cycles_to_transitions(_cycles, trans)
+                       if len(_cycles) == _G.EXPECTED_CYCLES else trans)
+            gt_resp = extract_responses(sa, anchors, te_corr, list(range(1, EEG_CHANNELS + 1)))
             grf_triggered_df = pd.DataFrame([asdict(r) for r in gt_resp])
             grf_triggered_df['subject'] = pair.subject_name
             grf_triggered_df['session'] = pair.session_name
+            grf_triggered_df['n_cycles'] = len(_cycles)
+            grf_triggered_df['protocol_ok'] = len(_cycles) == _G.EXPECTED_CYCLES
 
         sa.run_analysis()
 

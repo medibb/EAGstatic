@@ -19,6 +19,7 @@ manual_edges.json에 바로 저장 → parameter_extractor가 자동 반영.
 """
 
 import argparse
+import csv
 import json
 import io
 import sys
@@ -63,15 +64,22 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
     tg = sa.unified_time_grf
     signed = G.signed_imbalance(sa.grf_left, sa.grf_right)
 
+    # 프로토콜(체중부하 4 cycle × 2 = 8 이벤트) — edge 검출보다 먼저 anchor를 잡는다
+    rest, cycles = G.detect_load_cycles(tg, signed)
+    anchors = G.cycles_to_transitions(cycles, trans)
+
     man = edge_store.get_channel_edges(pair.subject_name, pair.session_name, channel)
     if man is not None:
         edges = man
         source = 'manual'
     else:
-        auto = G.detect_eag_edges(te, eag, fs=sa.eag.sample_rate)
+        auto = G.detect_eag_edges_protocol(te, eag, anchors, fs=sa.eag.sample_rate)
         edges = [{'onset_time': e[0], 'onset_amp': e[1],
                   'offset_time': e[3], 'offset_amp': e[4]} for e in auto]
         source = 'auto'
+    e_on = np.array([e['onset_time'] for e in edges]) if edges else np.array([])
+    e_amp = np.array([e['offset_amp'] - e['onset_amp'] for e in edges]) if edges else np.array([])
+    valid = G.validate_cycle_edges(cycles, e_on, e_amp, raw_trans=trans)
 
     step = max(1, len(te) // 20000)  # 표시 다운샘플 (확대 시 정밀도 확보용으로 넉넉히)
     r1 = lambda arr: [round(float(x), 1) for x in arr]
@@ -80,6 +88,16 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
         'subject': pair.subject_name, 'session': pair.session_name, 'channel': channel,
         'corrected_offset': round(float(off.corrected_offset), 3), 'method': off.method,
         'source': source,
+        'rest_level': round(float(rest), 3),
+        'cycles': [{'id': c.cycle_id, 'onset': round(c.onset_time, 3),
+                    'offset': round(c.offset_time, 3), 'load': round(c.load_level, 3),
+                    'step': round(c.load_step, 3)} for c in cycles],
+        'anchors': [{'t': round(a.time, 3), 'kind': 'on' if i % 2 == 0 else 'off',
+                     'cycle': i // 2} for i, a in enumerate(anchors)],
+        'valid': {k: valid[k] for k in ('ok', 'n_cycles', 'n_matched', 'n_events',
+                                        'n_edges', 'reasons')},
+        'events': valid['events'],
+        'expected_cycles': G.EXPECTED_CYCLES, 'expected_events': G.EXPECTED_EVENTS,
         'te': r3(_ds(te, step)), 'eag': r1(_ds(eag, step)),
         'grf_t': r3(_ds(tg, step)), 'grf_signed': r3(_ds(signed, step)),
         'trans': r3([t.time for t in trans]),
@@ -93,7 +111,6 @@ def load_worklist() -> list:
     p = Path('result/offset_review/worklist.csv')
     if not p.exists():
         return []
-    import csv
     out = []
     with open(p, encoding='utf-8') as f:
         for row in csv.DictReader(f):
@@ -109,6 +126,28 @@ def find_session_dir(subject: str, session: str) -> str:
     return ''
 
 
+def load_protocol_status() -> dict:
+    """edge_review 배치 결과 → 세션별 (통과채널수, 전체채널수, cycle수).
+
+    edge_review.py --dir data 로 생성. 없으면 빈 dict (드롭다운에 상태 미표시).
+    """
+    p = Path('result/edge_review/all_channels.csv')
+    if not p.exists():
+        return {}
+    out = {}
+    with open(p, encoding='utf-8') as f:
+        for r in csv.DictReader(f):
+            key = (r['subject'], r['session'])
+            e = out.setdefault(key, {'ok': 0, 'total': 0, 'cycles': None})
+            e['total'] += 1
+            if str(r['ok']).lower() == 'true':
+                e['ok'] += 1
+            if e['cycles'] is None:
+                try: e['cycles'] = int(r['n_cycles'])
+                except (ValueError, TypeError): pass
+    return out
+
+
 def session_index() -> list:
     """드롭다운용: 전체 세션 + worklist 사유 + 수동 edge 채널 + 수동 offset 확정 여부.
 
@@ -119,6 +158,7 @@ def session_index() -> list:
     from offset_manager import list_all_offsets
 
     wl = {(r['subject'], r['session']): r['reason'] for r in load_worklist()}
+    proto = load_protocol_status()
     ed = {}
     for r in edge_store.list_all():
         ed.setdefault((r['subject'], r['session']), []).append(
@@ -130,11 +170,15 @@ def session_index() -> list:
     for r in scan_sessions():
         key = (r['subject'], r['session'])
         chans = sorted(ed.get(key, []))
+        p = proto.get(key)
         rows.append({**r,
                      'reason': wl.get(key, ''), 'in_worklist': key in wl,
                      'edge_channels': [c for c, _ in chans],
                      'edge_counts': [n for _, n in chans],
-                     'manual_offset': off.get(key)})
+                     'manual_offset': off.get(key),
+                     'proto_ok': None if p is None else p['ok'],
+                     'proto_total': None if p is None else p['total'],
+                     'proto_cycles': None if p is None else p['cycles']})
     # 검토 대상 먼저, 그다음 피험자/세션 순
     rows.sort(key=lambda r: (not r['in_worklist'], r['subject'], r['session']))
     return rows
@@ -207,6 +251,8 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  #tip{font-size:12px;color:#666;margin:4px 0}
  table{border-collapse:collapse;font-size:12px;margin-top:6px}
  td,th{border:1px solid #ddd;padding:2px 6px}
+ #meta{font-size:13px;margin:6px 0;line-height:1.6}
+ .ok{color:#2ca02c}.bad{color:#d62728}
 </style></head><body>
 <div id="bar">
  <select id="wl" title="세션 목록" style="max-width:440px"></select>
@@ -215,6 +261,7 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
   <option value="review">검토대상 ▲</option>
   <option value="done">edge 확정 ✅</option>
   <option value="todo">edge 미확정</option>
+  <option value="proto">프로토콜 미충족 ⚠️</option>
  </select>
  <input id="sess" placeholder="session dir (또는 목록 선택)" size="30">
  <label>ch <input id="ch" type="number" value="1" min="1" max="8" style="width:44px"></label>
@@ -228,7 +275,8 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  <span id="status"></span>
 </div>
 <div id="tip">드래그=knee 이동 · Add mode 후 트레이스 2점 클릭=edge 추가 · edge 클릭 선택 후 Delete/Del키 · rise=빨강 fall=초록
-<br><b>휠=가로축 확대/축소</b> (커서 위치 기준) · <b>Shift+드래그 또는 휠버튼 드래그=좌우 이동</b> · f키/전체보기=원래대로 · 확대할수록 snap 범위도 좁아져 정밀해진다</div>
+<br><b>휠=가로축 확대/축소</b> (커서 위치 기준) · <b>Shift+드래그 또는 휠버튼 드래그=좌우 이동</b> · f키/전체보기=원래대로 · 확대할수록 snap 범위도 좁아져 정밀해진다
+<br>주황 음영=체중부하 cycle(프로토콜 4회) · 세로 점선=분석 anchor 8개(빨강=부하 시작, 파랑=이탈) · <b class="bad">굵은 빨강="누락"</b>=그 anchor에 knee가 없음 → 그 자리에 edge를 추가하세요</div>
 <canvas id="cv" width="1400" height="600"></canvas>
 <div id="meta"></div><div id="tbl"></div>
 <script>
@@ -272,6 +320,20 @@ function draw(){ if(!D||!view)return; ctx.clearRect(0,0,cv.width,cv.height);
   ctx.strokeStyle='#f2f2f2';ctx.beginPath();ctx.moveTo(x,M.t);ctx.lineTo(x,cv.height-M.b);ctx.stroke();
   ctx.fillText(t.toFixed(2),x,cv.height-M.b+13);}
  ctx.textAlign='left';ctx.fillText('time (s)  span='+(b-a).toFixed(2)+'s',M.l,cv.height-M.b+27);
+ // 체중부하 cycle 구간 음영 + 번호 (프로토콜: 4회)
+ (D.cycles||[]).forEach(c=>{const x1=X(c.onset),x2=X(c.offset);
+  ctx.fillStyle='rgba(255,127,14,.07)';ctx.fillRect(x1,M.t,x2-x1,cv.height-M.t-M.b);
+  ctx.fillStyle='#c26a12';ctx.font='11px sans-serif';ctx.textAlign='center';
+  ctx.fillText('부하'+(c.id+1)+' (step '+c.step.toFixed(2)+')',(x1+x2)/2,M.t+12);});
+ // 분석 anchor 8개 (cycle당 부하 시작/종료) — 여기에 knee가 하나씩 있어야 한다
+ (D.anchors||[]).forEach(a=>{const x=X(a.t);
+  vline(x,M.t,cv.height-M.t-M.b,a.kind==='on'?'rgba(214,39,40,.55)':'rgba(31,119,180,.55)',[2,3],1.5);});
+ // 매칭 실패한 anchor는 굵게 강조
+ (D.events||[]).filter(e=>e.edge_idx<0).forEach(e=>{const x=X(e.grf_time);
+  vline(x,M.t,cv.height-M.t-M.b,'#d62728',null,2.5);
+  ctx.fillStyle='#d62728';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
+  ctx.fillText('누락 c'+(e.cycle+1)+e.kind,x,M.t+26);});
+ ctx.textAlign='left';
  // GRF strip
  ctx.strokeStyle='#2ca02c';ctx.lineWidth=1;ctx.beginPath();
  for(let i=0;i<D.grf_t.length;i++){let x=X(D.grf_t[i]);let y=gy0+GH/2-(D.grf_signed[i])*(GH/2-6);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
@@ -324,9 +386,15 @@ document.getElementById('load').onclick=load;
 async function load(){let s=document.getElementById('sess').value,ch=document.getElementById('ch').value;
  status('loading...');let res=await fetch(api('api/data?session='+encodeURIComponent(s)+'&channel='+ch));
  let j=await res.json(); if(j.error){status('ERR: '+j.error);return;} D=j;sel=-1;addPts=[];setAdd(false);fitView();
- document.getElementById('meta').textContent=`${D.subject}/${D.session} ch${D.channel} · source=${D.source} · offset corr=${D.corrected_offset} (${D.method})`;
+ const v=D.valid||{};
+ document.getElementById('meta').innerHTML=
+  `${D.subject}/${D.session} ch${D.channel} · source=${D.source} · offset corr=${D.corrected_offset} (${D.method})`+
+  `<br><b class="${v.ok?'ok':'bad'}">${v.ok?'✅ 프로토콜 충족':'⚠️ 검토 필요'}</b>`+
+  ` — cycle ${v.n_cycles}/${D.expected_cycles} · 이벤트 매칭 ${v.n_matched}/${v.n_events}`+
+  ` · edge ${v.n_edges}개` + (v.reasons?` · <span class="bad">${v.reasons}</span>`:'');
  status('loaded '+D.edges.length+' edges');draw();}
-document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch(api('api/save'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();status(j.ok?('✅ saved '+j.n+' edges'):('ERR '+j.error));if(j.ok)refreshList();};
+document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch(api('api/save'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();if(j.error){status('ERR '+j.error);return;}
+ status('✅ saved '+j.n+' edges');await load();refreshList();};   // 재검증 위해 재로드
 document.getElementById('reset').onclick=async()=>{if(!D)return;await fetch(api('api/reset'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});await load();refreshList();};
 function status(t){document.getElementById('status').textContent=t;}
 function renderTbl(){let h='<table><tr><th>id</th><th>onset</th><th>offset</th><th>amp</th><th>dir</th></tr>';
@@ -339,12 +407,16 @@ function renderList(){
  const sel=document.getElementById('wl'), f=document.getElementById('filter').value;
  const cur=document.getElementById('sess').value;
  const done=x=>x.edge_channels.length>0;
- const keep=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?done(x) : !done(x);
+ const proto=x=>x.proto_total&&x.proto_ok<x.proto_total;
+ const keep=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?done(x)
+              : f==='proto'?proto(x) : !done(x);
  const rows=SESSIONS.filter(keep), nDone=SESSIONS.filter(done).length;
  sel.innerHTML=`<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · edge확정 ${nDone}) —</option>`;
  rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
-  o.textContent=(done(x)?'✅ ':x.in_worklist?'▲ ':'　 ')+x.subject+' / '+x.session+
-   (done(x)?'  [edge ch'+x.edge_channels.join(',')+' · '+x.edge_counts.reduce((a,b)=>a+b,0)+'개]':'')+
+  const pr = x.proto_total ? (x.proto_ok===x.proto_total?'✅':'⚠️')+x.proto_ok+'/'+x.proto_total : '';
+  o.textContent=(done(x)?'✔ ':x.in_worklist?'▲ ':'　 ')+x.subject+' / '+x.session+
+   (pr?'  [프로토콜 '+pr+(x.proto_cycles!=null&&x.proto_cycles!==4?' cyc'+x.proto_cycles:'')+']':'')+
+   (done(x)?'  [edge ch'+x.edge_channels.join(',')+']':'')+
    (x.manual_offset!=null?'  [off✅]':'')+
    (x.reason?'  · '+x.reason:'');
   sel.appendChild(o);});

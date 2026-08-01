@@ -50,6 +50,27 @@ class GRFTransition:
 
 
 @dataclass
+class LoadCycle:
+    """체중부하 1회 = 휴식 자세에서 검사측으로 체중을 옮겼다가 되돌아오는 구간.
+
+    프로토콜: 초기 발구름(offset 세팅) → 한발서기 4회(부하를 점진적으로 늘림).
+    한 cycle은 EAG에서 knee-pair 2개(부하 시작 시 1개, 이탈 시 1개)를 만든다
+    → 세션당 4 cycle × 2 = 8 이벤트가 분석 대상이다.
+    """
+    cycle_id: int
+    onset_time: float      # 부하 시작 (rest → load)
+    offset_time: float     # 부하 종료 (load → rest)
+    rest_level: float      # 휴식 자세 signed imbalance
+    load_level: float      # 부하 구간 signed imbalance (중앙값)
+    duration: float
+
+    @property
+    def load_step(self) -> float:
+        """dose = load_level - rest_level (부호 포함). |값|이 클수록 체중부하가 큼."""
+        return self.load_level - self.rest_level
+
+
+@dataclass
 class TriggeredResponse:
     """한 GRF 전이(rise/fall)에 대응하는 EAG 변화. onset+offset 두 knee로 변화 크기 측정.
 
@@ -129,6 +150,298 @@ def detect_grf_transitions(time: np.ndarray,
             to_level=float(e.plateau_after),
         ))
     return trans
+
+
+# ==================== 프로토콜(체중부하 cycle) 검출 ====================
+
+EXPECTED_CYCLES = 4          # 세션당 한발서기 횟수
+EXPECTED_EVENTS = 8          # = EXPECTED_CYCLES × 2 (부하 시작/종료)
+
+
+def find_plateaus(time: np.ndarray, signed: np.ndarray,
+                  tol: float = 0.08, min_dur: float = 1.0) -> List[tuple]:
+    """signed가 tol 안에서 min_dur 이상 유지되는 구간 = plateau.
+
+    Returns: [(i0, i1, level, duration), ...]
+    """
+    out = []
+    n = len(signed)
+    i = 0
+    while i < n:
+        j = i + 1
+        lo = hi = signed[i]
+        while j < n:
+            lo2, hi2 = min(lo, signed[j]), max(hi, signed[j])
+            if hi2 - lo2 > 2 * tol:
+                break
+            lo, hi = lo2, hi2
+            j += 1
+        if time[j - 1] - time[i] >= min_dur:
+            out.append([i, j - 1, float(np.median(signed[i:j])),
+                        float(time[j - 1] - time[i])])
+            i = j
+        else:
+            i += 1
+    # 완만한 드리프트로 한 plateau가 여러 조각으로 나뉘면 개수를 왜곡하므로,
+    # 시간상 맞닿아 있고 레벨이 비슷한 조각은 하나로 합친다.
+    merged = []
+    for p in out:
+        if merged and p[0] - merged[-1][1] <= 2 and abs(p[2] - merged[-1][2]) <= tol:
+            q = merged[-1]
+            q[1] = p[1]
+            q[2] = float(np.median(signed[q[0]:q[1] + 1]))
+            q[3] = float(time[q[1]] - time[q[0]])
+        else:
+            merged.append(p)
+    return [tuple(p) for p in merged]
+
+
+def rest_posture_level(time: np.ndarray, signed: np.ndarray,
+                       cluster_tol: float = 0.15) -> float:
+    """휴식 자세의 signed imbalance.
+
+    프로토콜상 휴식 자세는 부하 4회 사이사이에 **반복해서 돌아오는** 레벨이라
+    plateau가 5개(부하 전/사이/후) 생기는 반면, 각 부하 단계 레벨은 1번씩만 나온다.
+    따라서 plateau를 레벨로 군집화해 **구성원이 가장 많은 군집**을 휴식으로 본다
+    (동수면 총 지속시간이 긴 쪽).
+
+    단순 최빈값(히스토그램)은 프로토콜 전후의 양발 서기가 길거나 부하 단계가
+    한 bin에 몰릴 때 엉뚱한 레벨을 고르는 문제가 있어 이 방식을 쓴다.
+    """
+    pl = find_plateaus(time, signed)
+    if not pl:
+        return float(np.median(signed))
+    order = sorted(pl, key=lambda p: p[2])
+    groups, cur = [], [order[0]]
+    for p in order[1:]:
+        if p[2] - cur[-1][2] <= cluster_tol:
+            cur.append(p)
+        else:
+            groups.append(cur); cur = [p]
+    groups.append(cur)
+    best = max(groups, key=lambda g: (len(g), sum(p[3] for p in g)))
+    return float(np.median([p[2] for p in best]))
+
+
+def detect_load_cycles(time: np.ndarray, signed: np.ndarray,
+                       enter: float = 0.10, leave: float = 0.06,
+                       min_dur: float = 2.0, rest_need: float = 0.8,
+                       plateau_tol: float = 0.10
+                       ) -> Tuple[float, List[LoadCycle]]:
+    """휴식 자세에서 벗어났다 되돌아오는 구간 = 체중부하 cycle.
+
+    detect_grf_transitions는 사각파 edge를 min_amp(=0.3)로 잡기 때문에, 가장 가벼운
+    1단계(예: signed 0.99→0.82, 진폭 0.17)를 놓쳐 4회 중 3회만 검출되는 세션이 많다.
+    여기서는 문턱을 진폭이 아니라 "휴식 레벨로부터의 이탈"로 잡아 가벼운 단계도 포착한다.
+
+    프로토콜 전후의 양발 서기는 앞이나 뒤가 휴식 자세로 둘러싸이지 않으므로 제외된다.
+
+    Returns: (rest_level, cycles)
+    """
+    rest = rest_posture_level(time, signed)
+    dev = np.abs(signed - rest)
+    idx = np.flatnonzero(dev > enter)
+    if len(idx) == 0:
+        return rest, []
+
+    runs = []                                  # enter를 넘은 연속 구간
+    s = p = idx[0]
+    for i in idx[1:]:
+        if i - p > 1:
+            runs.append((s, p)); s = i
+        p = i
+    runs.append((s, p))
+
+    expanded = []                              # 히스테리시스: leave 아래로 내려갈 때까지 확장
+    for a, b in runs:
+        while a > 0 and dev[a - 1] > leave: a -= 1
+        while b < len(dev) - 1 and dev[b + 1] > leave: b += 1
+        expanded.append((a, b))
+    merged = []
+    for a, b in expanded:
+        if merged and a <= merged[-1][1] + 1:
+            merged[-1] = (merged[-1][0], max(b, merged[-1][1]))
+        else:
+            merged.append((a, b))
+
+    def rest_span(i0, step, ref):              # ref 시각 기준 rest_need 이상 휴식이 있나
+        i = i0
+        while 0 <= i < len(time) and dev[i] <= leave:
+            if abs(time[i] - ref) >= rest_need:
+                return True
+            i += step
+        return False
+
+    cycles: List[LoadCycle] = []
+    for a, b in merged:
+        if time[b] - time[a] < min_dur:                       # 순간적 흔들림
+            continue
+        if not (rest_span(a - 1, -1, time[a]) and
+                rest_span(b + 1, +1, time[b])):               # 프로토콜 전후 구간
+            continue
+        # 이벤트 시각은 "움직임이 시작되는 순간"이어야 EAG knee와 맞는다.
+        #   부하 시작 = 휴식 plateau를 벗어나는 순간(=a)
+        #   부하 종료 = 부하 plateau를 벗어나는 순간(=plateau 끝). b는 복귀 램프의 '끝'이라
+        #              1초 가까이 늦어 EAG rise와 어긋난다.
+        load = float(np.median(signed[a:b + 1]))
+        near = np.flatnonzero(np.abs(signed[a:b + 1] - load) <= plateau_tol)
+        if len(near):
+            p0, p1 = a + int(near[0]), a + int(near[-1])
+            load = float(np.median(signed[p0:p1 + 1]))
+        else:
+            p1 = b
+        cycles.append(LoadCycle(
+            cycle_id=len(cycles),
+            onset_time=float(time[a]), offset_time=float(time[p1]),
+            rest_level=rest, load_level=load,
+            duration=float(time[p1] - time[a])))
+    return rest, cycles
+
+
+def cycles_to_transitions(cycles: List[LoadCycle],
+                          raw_trans: Optional[List[GRFTransition]] = None,
+                          snap: float = 1.2) -> List[GRFTransition]:
+    """cycle → 분석 anchor 전이 8개 (cycle당 부하 시작/종료 2개).
+
+    extract_responses가 GRFTransition 목록을 받으므로, 프로토콜 이벤트만 anchor로
+    쓰면 발구름·전후 양발 서기 구간이 파라미터에 섞이지 않는다.
+    grf_step(dose)은 rest↔load 레벨 차이로 계산된다.
+
+    detect_grf_transitions의 knee 시각이 cycle 경계(문턱 교차)보다 정확하므로,
+    raw_trans가 주어지면 ±snap초 내 가장 가까운 전이로 시각을 보정한다.
+    (raw는 가벼운 단계를 '놓치는' 것이 문제일 뿐, 잡은 것의 시각은 정확하다.)
+    """
+    rt = np.array([t.time for t in raw_trans]) if raw_trans else np.array([])
+
+    def snapped(t):
+        if len(rt):
+            k = int(np.argmin(np.abs(rt - t)))
+            if abs(rt[k] - t) <= snap:
+                return float(rt[k])
+        return float(t)
+
+    trans: List[GRFTransition] = []
+    for c in cycles:
+        for t, frm, to in ((c.onset_time, c.rest_level, c.load_level),
+                           (c.offset_time, c.load_level, c.rest_level)):
+            trans.append(GRFTransition(
+                trans_id=len(trans), time=snapped(t),
+                direction='R->L' if to > frm else 'L->R',
+                from_level=float(frm), to_level=float(to)))
+    return trans
+
+
+def detect_edge_near(te: np.ndarray, sig: np.ndarray, t0: float, fs: int,
+                     lat_lo: float = -0.5, lat_hi: float = 1.5,
+                     frac: float = 0.30, min_amp: float = 8.0,
+                     smooth_sec: float = 0.20, max_dur: float = 2.5):
+    """anchor 시각 t0 부근에서 EAG knee-pair를 국소 검출.
+
+    detect_eag_edges는 전역 문턱(min_amp=25µV, slope_k)을 쓰기 때문에, 가장 가벼운
+    부하 단계처럼 반응이 작은 이벤트를 통째로 놓친다. 여기서는 "GRF 이벤트가 그 시각에
+    분명히 있다"는 사전정보를 이용해 창 안에서 가장 가파른 지점을 찾고, 기울기가
+    정점의 frac 이하로 떨어지는 곳까지 좌우로 넓혀 knee 두 개를 잡는다.
+
+    Returns: (onset_t, onset_a, amp, offset_t, offset_a) 또는 None
+    """
+    i0 = int(np.searchsorted(te, t0 + lat_lo))
+    i1 = int(np.searchsorted(te, t0 + lat_hi))
+    if i1 - i0 < 5:
+        return None
+    sm = _smooth(sig, max(1, int(smooth_sec * fs)))
+    slope = np.gradient(sm) * fs
+    k = i0 + int(np.argmax(np.abs(slope[i0:i1])))
+    peak = abs(slope[k])
+    if peak <= 0:
+        return None
+    thr = frac * peak
+    lim = int(max_dur * fs)
+    a = k
+    while a > 0 and abs(slope[a - 1]) > thr and k - a < lim:
+        a -= 1
+    b = k
+    while b < len(slope) - 1 and abs(slope[b + 1]) > thr and b - k < lim:
+        b += 1
+    amp = float(sm[b] - sm[a])
+    if abs(amp) < min_amp:
+        return None
+    return (float(te[a]), float(sm[a]), amp, float(te[b]), float(sm[b]))
+
+
+def detect_eag_edges_protocol(te: np.ndarray, sig: np.ndarray,
+                              anchors: List[GRFTransition], fs: int,
+                              lat_lo: float = -0.5, lat_hi: float = 1.5,
+                              **kw) -> List[Tuple[float, float, float, float, float]]:
+    """전역 검출 + anchor별 국소 보강.
+
+    전역 detect_eag_edges 결과를 기준으로 하되, 매칭되는 edge가 없는 anchor에 대해서만
+    detect_edge_near로 약한 반응을 회수한다. 프로토콜 이벤트(8개)를 최대한 채우면서
+    전역 검출이 이미 잘 잡은 곳은 건드리지 않는다.
+    """
+    edges = list(detect_eag_edges(te, sig, fs=fs, **kw))
+    for tr in anchors:
+        e_on = np.array([e[0] for e in edges]) if edges else np.array([])
+        if len(e_on):
+            sel = np.where((e_on - tr.time >= lat_lo) & (e_on - tr.time <= lat_hi))[0]
+            if len(sel):
+                continue                       # 이미 매칭됨
+        got = detect_edge_near(te, sig, tr.time, fs, lat_lo, lat_hi)
+        if got is not None:
+            edges.append(got)
+    edges.sort(key=lambda e: e[0])
+    return edges
+
+
+def validate_cycle_edges(cycles: List[LoadCycle], edge_on: np.ndarray,
+                         edge_amp: np.ndarray,
+                         raw_trans: Optional[List[GRFTransition]] = None,
+                         lat_lo: float = -0.5, lat_hi: float = 1.5) -> dict:
+    """세션·채널의 EAG edge가 프로토콜(4 cycle × 2 = 8 이벤트)을 만족하는지 검사.
+
+    각 cycle의 부하 시작/종료 anchor마다 [lat_lo, lat_hi] 안에 edge가 하나씩 있어야 하고,
+    부하 시작 쪽과 종료 쪽의 방향(rise/fall)이 서로 반대여야 한다(= fall-rise 교대).
+
+    Returns: {'ok', 'n_cycles', 'n_matched', 'n_edges', 'reasons', 'events'}
+    """
+    reasons = []
+    if len(cycles) != EXPECTED_CYCLES:
+        reasons.append(f'cycle {len(cycles)}회(기대 {EXPECTED_CYCLES})')
+
+    anchors = cycles_to_transitions(cycles, raw_trans)
+    events, dirs = [], []
+    for i, tr in enumerate(anchors):
+        kind = 'on' if i % 2 == 0 else 'off'
+        t = tr.time
+        k = -1
+        if len(edge_on):
+            sel = np.where((edge_on - t >= lat_lo) & (edge_on - t <= lat_hi))[0]
+            if len(sel):
+                k = int(sel[np.argmin(np.abs(edge_on[sel] - t))])
+        d = '' if k < 0 else ('rise' if edge_amp[k] > 0 else 'fall')
+        events.append({'cycle': i // 2, 'kind': kind, 'grf_time': float(t),
+                       'edge_idx': k, 'direction': d,
+                       'edge_time': float(edge_on[k]) if k >= 0 else None})
+        dirs.append((kind, d))
+
+    n_match = sum(1 for e in events if e['edge_idx'] >= 0)
+    if n_match < len(events):
+        miss = [f"c{e['cycle']+1}{e['kind']}" for e in events if e['edge_idx'] < 0]
+        reasons.append(f'edge 누락 {len(events)-n_match}개({",".join(miss)})')
+
+    on_d = {d for k, d in dirs if k == 'on' and d}
+    off_d = {d for k, d in dirs if k == 'off' and d}
+    if len(on_d) > 1 or len(off_d) > 1:
+        reasons.append('방향 불일치(cycle마다 rise/fall이 다름)')
+    elif on_d and off_d and on_d == off_d:
+        reasons.append(f'교대 아님(시작·종료 모두 {on_d.pop()})')
+
+    dup = len(set(e['edge_idx'] for e in events if e['edge_idx'] >= 0))
+    if dup < n_match:
+        reasons.append('한 edge가 두 이벤트에 중복 매칭')
+
+    return {'ok': not reasons, 'n_cycles': len(cycles), 'n_matched': n_match,
+            'n_events': len(events), 'n_edges': int(len(edge_on)),
+            'reasons': '; '.join(reasons), 'events': events}
 
 
 # ==================== EAG edge(knee) 검출 ====================
@@ -473,7 +786,10 @@ def extract_responses(sa: SyncAnalyzer, trans: List[GRFTransition],
                         e['offset_time'], e['offset_amp']) for e in man]
         else:
             eag_c = detrend(sa.eag_filtered[:, ch - 1])
-            edges_c = detect_eag_edges(te_corr, eag_c, fs=sa.eag.sample_rate)
+            # anchor(=프로토콜 이벤트)가 주어지면 놓친 약한 반응을 국소 보강해 회수한다
+            edges_c = detect_eag_edges_protocol(te_corr, eag_c, trans,
+                                                fs=sa.eag.sample_rate,
+                                                lat_lo=lat_lo, lat_hi=lat_hi)
         e_on = np.array([e[0] for e in edges_c]) if edges_c else np.array([])
         for tr in trans:
             matched = False

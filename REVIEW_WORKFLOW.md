@@ -76,7 +76,32 @@ python3 offset_review.py --clear --subject "(02.02_17)김종문_1" --session-nam
 
 ## Step 2. EDGE 검토·수정 (offset 확정 후, 세션·채널별)
 
-각 GRF 전이(rise=부하 / fall=이탈)마다 EAG **knee-pair(onset+offset) 2개**가 plateau corner에 붙어야 한다 (체중부하 cycle당 4 knee). 놓친 것은 **추가**, 가짜는 **삭제**, 어긋난 것은 **이동**.
+### 프로토콜 기준 — 세션당 8개 이벤트
+
+연구 설계: **초기 발구름**(offset 세팅) → **한발서기 4회**(체중부하를 점진적으로 늘림).
+분석 대상은 4회 각각의 **부하 시작 / 이탈**이므로, 세션·채널당
+
+> **체중부하 cycle 4회 × 2 = 8개 이벤트**, EAG에서 **fall–rise가 4번 반복**되어 knee-pair 8개
+
+가 나와야 한다. 발구름과 프로토콜 전후의 양발 서기는 분석에서 제외된다.
+
+`detect_load_cycles()`가 "휴식 자세(한쪽 다리에 실은 상태)에서 벗어났다 돌아오는 구간"으로
+4회를 잡고, `cycles_to_transitions()`가 anchor 8개를 만든다. anchor 시각은 `detect_grf_transitions`의
+knee로 스냅해 정확도를 유지한다.
+
+### 검토 대상 추리기
+```bash
+python3 edge_review.py --dir data                 # 전 세션 스캔 → worklist
+python3 edge_review.py --session "<세션경로>"      # 단일 세션 채널별 진단표
+python3 edge_review.py --list                      # 요약
+```
+→ `result/edge_review/worklist.csv`(8개가 안 나온 채널) · `all_channels.csv`(전체)
+
+판정 실패 사유: `cycle N회(기대 4)` · `edge 누락 k개(c1off …)` · `교대 아님` · `방향 불일치`
+
+### 수정 원칙
+각 anchor마다 EAG **knee-pair(onset+offset)**가 하나씩 붙어야 한다.
+놓친 것은 **추가**, 가짜는 **삭제**, 어긋난 것은 **이동**.
 
 ### 방법 A: GUI (권장)
 ```bash
@@ -87,6 +112,11 @@ python3 edge_app.py --host 0.0.0.0 --port 8765
   - **전체 세션**이 나온다(worklist 세션만이 아님). 검토대상 `▲` 우선 정렬,
     edge가 확정된 세션은 `✅ … [edge ch1,2 · 24개]`, offset이 확정된 세션은 `[off✅]`로 표시
   - 옆 필터로 `전체 / 검토대상 / edge 확정 / edge 미확정` 전환 → 남은 작업량 파악에 사용
+- **화면에 프로토콜이 그려진다**: 주황 음영 = 체중부하 cycle 4회(`부하N (step …)`),
+  세로 점선 = anchor 8개(빨강=부하 시작, 파랑=이탈), **굵은 빨강 `누락 cN…`** = 그 anchor에
+  knee가 없다는 뜻이니 그 자리에 edge를 추가하면 된다
+- 상단 meta에 **`✅ 프로토콜 충족` / `⚠️ 검토 필요`** 와 `cycle n/4 · 이벤트 매칭 m/8`이 표시되고,
+  **Save 즉시 재검증**된다 (8/8이 되면 ✅로 바뀜)
 - knee 점 **드래그**로 이동 · **Add mode** 후 트레이스 2점 클릭으로 edge 추가 · edge 선택 후 **Delete/Del키** · **snap** 체크 시 corner 자동정렬
 - **휠**=가로축 확대/축소(커서 기준) · **Shift+드래그**(또는 휠버튼 드래그)=좌우 이동 · **f키/전체보기**=원래대로.
   확대하면 y축도 그 구간에 맞춰 재조정되고 snap 탐색 범위도 함께 좁아져 정밀해진다
