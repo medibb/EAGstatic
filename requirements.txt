@@ -12,3 +12,8 @@ pingouin>=0.5.4
 # statsmodels: stats_grf_eag.py의 혼합모형(mixed model) dose-response.
 #   미설치 시 subject별 OLS 기울기 집단검정으로 자동 대체됨.
 statsmodels>=0.14.0
+
+# --- 한글 폰트 (Linux/Docker 플롯 라벨) ---
+# koreanize-matplotlib: NanumGothic 번들. root/apt 없이 한글 렌더링.
+#   macOS는 시스템 폰트(AppleSDGothicNeo) 자동감지라 불필요. 없어도 □로 폴백(에러 아님).
+koreanize-matplotlib>=0.1.1

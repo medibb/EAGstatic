@@ -25,6 +25,11 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats as sps
+try:
+    from eag_analyzer import setup_korean_font
+    setup_korean_font()
+except Exception:
+    pass
 
 IN_DIR = Path('result/phase1_params')
 OUT_DIR = Path('result/stats')

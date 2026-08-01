@@ -29,17 +29,56 @@ import argparse
 
 # ==================== 한글 폰트 설정 ====================
 def setup_korean_font():
-    """한글 폰트 설정"""
+    """한글 폰트 설정 (cross-platform: macOS/Linux/Windows).
+
+    사용 가능한 한글 폰트를 찾아 등록. 없으면 DejaVu Sans 폴백(한글은 □).
+    Linux/Docker에 한글 폰트가 없으면 설치 필요:
+        apt-get install -y fonts-nanum && fc-cache -f
+    반환: 적용된 폰트 이름 또는 None(폴백).
+    """
+    candidate_files = [
+        # macOS
+        "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+        "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
+        "/Library/Fonts/AppleGothic.ttf",
+        # Linux (nanum / noto CJK)
+        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJKkr-Regular.otf",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        # Windows
+        "C:/Windows/Fonts/malgun.ttf",
+    ]
+    # pip 번들 폰트(koreanize_matplotlib, NanumGothic) — root/apt 없이 설치 가능, Docker에 편리
     try:
-        font_path = "C:/Windows/Fonts/malgun.ttf"
-        if os.path.exists(font_path):
-            font_manager.fontManager.addfont(font_path)
-            plt.rcParams['font.family'] = 'Malgun Gothic'
-        else:
-            plt.rcParams['font.family'] = 'DejaVu Sans'
+        import koreanize_matplotlib as _km
+        _bundle = os.path.join(os.path.dirname(_km.__file__), 'fonts', 'NanumGothic.ttf')
+        if os.path.exists(_bundle):
+            candidate_files.insert(0, _bundle)
     except Exception:
-        plt.rcParams['font.family'] = 'DejaVu Sans'
+        pass
     plt.rcParams['axes.unicode_minus'] = False
+    for fp in candidate_files:
+        if os.path.exists(fp):
+            try:
+                font_manager.fontManager.addfont(fp)
+                name = font_manager.FontProperties(fname=fp).get_name()
+                plt.rcParams['font.family'] = name
+                return name
+            except Exception:
+                continue
+    # 파일 경로로 못 찾으면 등록된 폰트 중 한글계열 이름 탐색
+    korean_names = ['Malgun Gothic', 'AppleGothic', 'Apple SD Gothic Neo',
+                    'NanumGothic', 'Nanum Gothic', 'NanumBarunGothic',
+                    'Noto Sans CJK KR', 'Noto Sans KR', 'Noto Sans CJK JP',
+                    'Gulim', 'Batang', 'UnDotum']
+    available = {f.name for f in font_manager.fontManager.ttflist}
+    for nm in korean_names:
+        if nm in available:
+            plt.rcParams['font.family'] = nm
+            return nm
+    plt.rcParams['font.family'] = 'DejaVu Sans'
+    return None
 
 
 # ==================== 설정 상수 ====================

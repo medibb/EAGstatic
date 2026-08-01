@@ -31,9 +31,11 @@ import matplotlib.pyplot as plt
 from scipy.signal import detrend
 
 from sync_analyzer import SyncAnalyzer, find_all_pairs, find_session_pair, SAMPLE_RATE
-from eag_analyzer import EEG_CHANNELS
+from eag_analyzer import EEG_CHANNELS, setup_korean_font
 from edge_annotator import detect_edges as _detect_edges_signal
 import edge_store
+
+setup_korean_font()  # 플롯 한글 라벨 (offset_review/edge_editor/parameter_extractor에 전파)
 
 
 # ==================== 데이터 구조 ====================
