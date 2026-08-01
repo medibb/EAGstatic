@@ -46,6 +46,7 @@ results/
 
 # 인증·권한·서비스 세팅 메모 (로컬 전용, 절대 커밋 금지)
 AUTH_SETUP.md
+_ssh_pubkey.txt
 
 # Research documents (large binaries, kept on disk only)
 인바디/
