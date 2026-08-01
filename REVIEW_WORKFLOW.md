@@ -39,6 +39,24 @@ reason 의미:
 - 안 겹치면 → 겹치게 만드는 offset 값을 판단 (제목의 `corrected=` 값 기준, profile의 best-match나 육안 참고)
 
 ### ③ 값 확정 (안 맞는 세션만)
+
+#### 방법 A: GUI로 점 찍어 맞추기 (권장 — 눈금 읽을 필요 없음)
+```bash
+python3 offset_app.py --host 0.0.0.0 --port 8766
+```
+브라우저 `http://<서버IP>:8766` 접속 →
+- 드롭다운에서 세션 선택(검토대상 `▲` 우선 정렬) → 자동 Load
+- **GRF 패널(위)에서 기준 변곡점 클릭 → EAG 패널(아래)에서 대응 변곡점 클릭** → 쌍 성립,
+  두 점이 겹치도록 EAG가 즉시 이동 (최종 offset = `corrected + (EAG − GRF)`)
+- 쌍을 여러 개 찍으면 **중앙값** 사용 → 한 쌍이 부정확해도 강건. 표에서 개별 쌍 삭제 가능
+- **휠**=확대/축소, **드래그**=좌우 이동, **snap** 체크 시 클릭 지점 근처의 변곡점(|2차미분| 최대)으로 자동 흡착
+- 보조: 맨 위 match-rate 프로파일 클릭 → 그 residual로 점프 · `best-match 값 사용` · `nudge ±0.02/±0.1` · offset 직접 입력
+- 잘 겹치면 **Save** → `result/manual_offsets.json` 확정 · **Clear manual** → 자동값 복귀
+
+> 수동 offset이 있는 세션은 residual 재계산 없이(`recompute=False`) 불러오므로,
+> **화면에서 본 정렬 = 파이프라인 정렬**이다 (`parameter_extractor`와 같은 규칙).
+
+#### 방법 B: CLI
 ```bash
 python3 offset_review.py --set --subject "(02.02_17)김종문_1" --session-name s2 --offset -0.15
 ```
@@ -94,7 +112,7 @@ python3 stats_grf_eag.py                       # dose-response 통계 (STATS_PLA
 
 ```
 worklist 세션 하나 선택
-  → offset 패널 확인 → (필요시) offset_review --set
+  → offset 패널 확인 → (필요시) offset_app에서 GRF·EAG 점 찍어 Save
   → edge_app에서 그 세션 Load → knee 수정 → Save
 다음 세션 반복
   → 다 끝나면 parameter_extractor --batch → stats_grf_eag
@@ -105,5 +123,10 @@ worklist 세션 하나 선택
 
 ## 참고
 
+- **외부(DDNS) 접속**: 두 GUI 모두 code-server 내장 포트 프록시로 중계된다. 도커 포트 퍼블리시·공유기 포트포워딩 불필요.
+  - offset GUI : `http://medibb.synology.me:18440/proxy/8766/`
+  - edge GUI  : `http://medibb.synology.me:18440/proxy/8765/`
+  - **끝 슬래시(`/`) 필수**, code-server에 로그인된 브라우저여야 한다(프록시가 인증 뒤에 있음).
+  - 두 앱 모두 API를 문서 기준 상대경로로 호출하므로 프록시 prefix 아래에서 동작한다. 새 GUI를 만들 때도 절대경로(`/api/...`) 대신 같은 방식을 쓸 것.
 - 한글 폰트: Linux/Docker는 `pip install koreanize-matplotlib`(또는 `apt-get install -y fonts-nanum`) 후 패널 재생성 시 한글 라벨 정상 표시. macOS는 자동.
 - 상세 파일 구조·전체 파이프라인은 `README.md`, 통계 설계는 `STATS_PLAN.md` 참조.

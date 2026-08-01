@@ -36,7 +36,8 @@ EAGstatic/
 ├── grf_viewer.py             # GRF/force plate 로딩 (sync_analyzer 하드 의존)
 ├── sync_analyzer.py           # EAG+GRF 동기화 엔진 (manual offset 반영)
 ├── offset_manager.py          # manual_offsets.json 관리
-├── offset_review.py           # offset 검토 UI/worklist
+├── offset_review.py           # offset 검토 UI/worklist (패널 PNG + CLI 확정)
+├── offset_app.py              # offset 정렬 GUI(로컬 브라우저, 점 찍어 맞추기)
 ├── edge_annotator.py          # EAG edge(knee) 검출
 ├── grf_triggered_annotator.py # GRF-anchored offset + knee 추출
 ├── edge_store.py              # manual_edges.json 관리
@@ -78,7 +79,7 @@ EAGstatic/
 | 단계 | 명령 | 산출물 |
 |------|------|--------|
 | 1. offset 진단 (GRF-anchored edge-align, 동시성 latency≈0) | `python3 grf_triggered_annotator.py --dir data --channels 1 --offset-report` | `result/offset_report.csv` |
-| 2. offset 수동검토 (needs_review 세션) | `python3 offset_review.py --dir data` → 패널 확인 → `offset_review.py --set --subject <S> --session-name <ss> --offset <v>` | `result/manual_offsets.json` |
+| 2. offset 수동검토 (needs_review 세션) | `python3 offset_review.py --dir data` → 패널 확인 → GUI `python3 offset_app.py --host 0.0.0.0 --port 8766` (GRF·EAG 대응점 클릭 → Save) · CLI `offset_review.py --set --subject <S> --session-name <ss> --offset <v>` | `result/manual_offsets.json` |
 | 3. EAG edge 수동수정 (부정확 세션/채널) | GUI `python3 edge_app.py --host 0.0.0.0 --port 8765` · CLI `edge_editor.py review/add/delete/move/reset --session <dir> --channel <n>` | `result/manual_edges.json` |
 | 4. 파라미터 추출 (Phase 1/2/3, GRF 전이별 knee-pair) | `python3 parameter_extractor.py --batch [--phase3]` | `result/phase1_params/grf_triggered_params_*.csv` 등 |
 | 5. 통계 (단계별 부하 dose-response) | `python3 stats_grf_eag.py [--exclude-review]` | `result/stats/` |

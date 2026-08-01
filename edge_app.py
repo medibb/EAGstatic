@@ -9,6 +9,9 @@ manual_edges.json에 바로 저장 → parameter_extractor가 자동 반영.
 실행:
   python3 edge_app.py                 # http://127.0.0.1:8765
   python3 edge_app.py --port 8890
+외부(DDNS) 접속: code-server 내장 포트 프록시 경유 — 끝 슬래시 필수
+  http://<code-server 호스트>/proxy/8765/     (예: medibb.synology.me:18440)
+  API를 문서 기준 상대경로로 호출하므로 프록시 prefix 아래에서도 동작한다.
 브라우저에서:
   - 세션 디렉터리 + 채널 입력 후 Load
   - knee 점을 드래그해 이동 / [Add]모드로 트레이스 2점 클릭해 edge 추가 / edge 선택 후 Delete
@@ -188,6 +191,10 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <canvas id="cv" width="1400" height="560"></canvas>
 <div id="meta"></div><div id="tbl"></div>
 <script>
+// API 경로는 현재 문서 기준 상대경로로 — code-server의 /proxy/<port>/ 중계 아래에서도 동작
+const BASE=(()=>{let p=location.pathname; if(/\.[a-z]+$/i.test(p))p=p.replace(/[^/]*$/,'');
+ return p.endsWith('/')?p:p+'/';})();
+const api=p=>BASE+p;
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 let D=null, sel=-1, addPts=[], addMode=false, drag=null;
 const M={l:55,r:15,t:15,b:20}, GH=140; // GRF strip height
@@ -243,20 +250,20 @@ document.getElementById('addmode').onclick=()=>setAdd(!addMode);
 document.getElementById('del').onclick=()=>{if(sel>=0){D.edges.splice(sel,1);sel=-1;draw();}};
 document.getElementById('load').onclick=load;
 async function load(){let s=document.getElementById('sess').value,ch=document.getElementById('ch').value;
- status('loading...');let res=await fetch('/api/data?session='+encodeURIComponent(s)+'&channel='+ch);
+ status('loading...');let res=await fetch(api('api/data?session='+encodeURIComponent(s)+'&channel='+ch));
  let j=await res.json(); if(j.error){status('ERR: '+j.error);return;} D=j;sel=-1;addPts=[];setAdd(false);
  document.getElementById('meta').textContent=`${D.subject}/${D.session} ch${D.channel} · source=${D.source} · offset corr=${D.corrected_offset} (${D.method})`;
  status('loaded '+D.edges.length+' edges');draw();}
-document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();status(j.ok?('saved '+j.n+' edges'):('ERR '+j.error));};
-document.getElementById('reset').onclick=async()=>{if(!D)return;await fetch('/api/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});load();};
+document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch(api('api/save'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();status(j.ok?('saved '+j.n+' edges'):('ERR '+j.error));};
+document.getElementById('reset').onclick=async()=>{if(!D)return;await fetch(api('api/reset'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});load();};
 function status(t){document.getElementById('status').textContent=t;}
 function renderTbl(){let h='<table><tr><th>id</th><th>onset</th><th>offset</th><th>amp</th><th>dir</th></tr>';
  D.edges.forEach((e,k)=>{let amp=(e.offset_amp-e.onset_amp);h+=`<tr style="${k===sel?'background:#eef':''}"><td>${k}</td><td>${e.onset_time.toFixed(2)}</td><td>${e.offset_time.toFixed(2)}</td><td>${amp.toFixed(0)}</td><td>${amp>0?'rise':'fall'}</td></tr>`;});
  document.getElementById('tbl').innerHTML=h+'</table>';}
 // worklist dropdown
-fetch('/api/worklist').then(r=>r.json()).then(w=>{let sel=document.getElementById('wl');sel.innerHTML='<option value="">— worklist —</option>';
+fetch(api('api/worklist')).then(r=>r.json()).then(w=>{let sel=document.getElementById('wl');sel.innerHTML='<option value="">— worklist —</option>';
  w.forEach(x=>{let o=document.createElement('option');o.value=JSON.stringify(x);o.textContent=`${x.subject} ${x.session} · ${x.reason}`.slice(0,70);sel.appendChild(o);});
- sel.onchange=async()=>{if(!sel.value)return;let x=JSON.parse(sel.value);let r=await fetch('/api/finddir?subject='+encodeURIComponent(x.subject)+'&session_name='+encodeURIComponent(x.session));let j=await r.json();document.getElementById('sess').value=j.dir;};});
+ sel.onchange=async()=>{if(!sel.value)return;let x=JSON.parse(sel.value);let r=await fetch(api('api/finddir?subject='+encodeURIComponent(x.subject)+'&session_name='+encodeURIComponent(x.session)));let j=await r.json();document.getElementById('sess').value=j.dir;};});
 </script></body></html>"""
 
 
