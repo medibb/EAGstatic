@@ -55,7 +55,8 @@ def diagnose_session(session_dir: str, channels=None) -> list:
         sa = SyncAnalyzer(pair)
         off, trans, signed, _ = G.compute_offset(sa, 0, True)
     te = sa.unified_time_eag - off.residual
-    rest, cycles = G.detect_load_cycles(sa.unified_time_grf, signed)
+    rest, cycles, _cinfo = G.detect_load_cycles_expected(
+        sa.unified_time_grf, signed, sa.grf_left, sa.grf_right)
     anchors = G.cycles_to_transitions(cycles, trans)
 
     n_ch = int(sa.eag_filtered.shape[1])
@@ -79,6 +80,14 @@ def diagnose_session(session_dir: str, channels=None) -> list:
             'source': source, 'ok': v['ok'],
             'n_cycles': v['n_cycles'], 'n_matched': v['n_matched'],
             'n_events': v['n_events'], 'n_edges': v['n_edges'],
+            'n_measured_cycles': v['n_measured_cycles'],
+            'load_pct': ';'.join('' if p['load_pct'] is None else f"{p['load_pct']:.0f}"
+                                 for p in v['per_cycle']),
+            'amp': ';'.join('' if p['amp'] is None else f"{p['amp']:.0f}"
+                            for p in v['per_cycle']),
+            'asym': ';'.join('' if p['asymmetry'] is None else f"{p['asymmetry']:.2f}"
+                             for p in v['per_cycle']),
+            'n_noise': len(v['noise_idx']),
             'rest_level': round(rest, 3),
             'corrected_offset': round(float(off.corrected_offset), 3),
             'reasons': v['reasons'], 'session_dir': str(session_dir),

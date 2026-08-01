@@ -97,7 +97,25 @@ python3 edge_review.py --list                      # 요약
 ```
 → `result/edge_review/worklist.csv`(8개가 안 나온 채널) · `all_channels.csv`(전체)
 
-판정 실패 사유: `cycle N회(기대 4)` · `edge 누락 k개(c1off …)` · `교대 아님` · `방향 불일치`
+판정 실패 사유: `cycle N회(기대 4)` · `측정 불가 cycle k개(cN …)` · `부하/이탈 방향 같음(cN)` · `한 edge가 두 이벤트에 중복 매칭`
+
+### 판정 규칙 (연구 설계 반영)
+
+- **모든 세션은 4회를 시행했다.** 3회로 보이면 가장 가벼운 단계가 노이즈에 묻힌 것이므로,
+  `detect_load_cycles_expected()`가 문턱을 낮춰가며 4회가 나오는 조합을 찾는다.
+- **같은 부하의 rise와 fall은 크기가 거의 같다.** 따라서 한쪽이 노이즈로 못 쓰게 돼도
+  다른 한쪽만 제대로 측정되면 그 부하에서의 EAG 크기를 알 수 있다
+  → cycle은 **이벤트가 1개 이상**이면 측정 가능으로 본다 (1단계도 분석에 포함).
+  `per_cycle.asymmetry`(두 값의 상대 차이)가 크면 한쪽이 오염됐다는 신호다.
+- **edge는 부하의 시작과 끝에서만 발생한다.** 부하 구간 한가운데나 휴식 구간에서 검출된 edge는
+  노이즈다 → anchor에 매칭되지 않은 edge는 **노이즈 후보**로 표시되고,
+  annotator의 `노이즈 삭제` 버튼으로 일괄 제거할 수 있다.
+
+### 체중부하율 파라미터
+
+설계는 20-50-80-100%지만 사람마다 다르므로, cycle별 **실측 부하율**을 파라미터로 남긴다.
+`load_pct = 검사측 힘 / 전체 힘`의 부하 구간 평균 (검사측 = 휴식 시 비어 있던 다리).
+`parameter_extractor`의 grf_triggered 출력에 `cycle_id · event_kind · load_pct · test_side` 컬럼으로 들어간다.
 
 ### 수정 원칙
 각 anchor마다 EAG **knee-pair(onset+offset)**가 하나씩 붙어야 한다.

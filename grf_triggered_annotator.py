@@ -63,11 +63,19 @@ class LoadCycle:
     rest_level: float      # 휴식 자세 signed imbalance
     load_level: float      # 부하 구간 signed imbalance (중앙값)
     duration: float
+    test_side: str = ''    # 부하가 실리는(검사) 다리 'L'|'R' — 휴식 시 비어 있던 쪽
+    load_ratio: float = float('nan')   # 부하 구간 평균: 검사측 / 전체 (0~1)
+    rest_ratio: float = float('nan')   # 휴식 구간 기준 검사측 비율 (기저)
 
     @property
     def load_step(self) -> float:
         """dose = load_level - rest_level (부호 포함). |값|이 클수록 체중부하가 큼."""
         return self.load_level - self.rest_level
+
+    @property
+    def load_pct(self) -> float:
+        """검사측 체중부하율 (%). 실험설계 20-50-80-100%에 대응하는 실측값."""
+        return self.load_ratio * 100.0
 
 
 @dataclass
@@ -226,7 +234,9 @@ def rest_posture_level(time: np.ndarray, signed: np.ndarray,
 def detect_load_cycles(time: np.ndarray, signed: np.ndarray,
                        enter: float = 0.10, leave: float = 0.06,
                        min_dur: float = 2.0, rest_need: float = 0.8,
-                       plateau_tol: float = 0.10
+                       plateau_tol: float = 0.10,
+                       left: Optional[np.ndarray] = None,
+                       right: Optional[np.ndarray] = None
                        ) -> Tuple[float, List[LoadCycle]]:
     """휴식 자세에서 벗어났다 되돌아오는 구간 = 체중부하 cycle.
 
@@ -264,11 +274,21 @@ def detect_load_cycles(time: np.ndarray, signed: np.ndarray,
         else:
             merged.append((a, b))
 
-    def rest_span(i0, step, ref):              # ref 시각 기준 rest_need 이상 휴식이 있나
-        i = i0
-        while 0 <= i < len(time) and dev[i] <= leave:
-            if abs(time[i] - ref) >= rest_need:
-                return True
+    def rest_span(i0, step, ref, search=4.0):
+        """ref에서 step 방향 search초 안에 rest_need 이상 '이어지는' 휴식 구간이 있는가.
+
+        경계 직후 신호가 휴식 레벨로 서서히 안정되므로(예: 0.89→0.98에 1초 소요),
+        '경계 직후부터 연속' 조건은 가벼운 단계를 탈락시킨다. 창 안에서 찾는다.
+        """
+        i, run0 = i0, None
+        while 0 <= i < len(time) and abs(time[i] - ref) <= search:
+            if dev[i] <= leave:
+                if run0 is None:
+                    run0 = time[i]
+                elif abs(time[i] - run0) >= rest_need:
+                    return True
+            else:
+                run0 = None
             i += step
         return False
 
@@ -290,12 +310,59 @@ def detect_load_cycles(time: np.ndarray, signed: np.ndarray,
             load = float(np.median(signed[p0:p1 + 1]))
         else:
             p1 = b
+        # 검사측 = 휴식 시 비어 있던 다리 (signed>0이면 왼쪽에 실은 상태 → 검사측은 오른쪽)
+        side = 'R' if rest > 0 else 'L'
+        ratio = rest_r = float('nan')
+        if left is not None and right is not None:
+            tot = np.asarray(left, float) + np.asarray(right, float)
+            test = np.asarray(right if side == 'R' else left, float)
+            ok = tot > 1e-6
+            seg = slice(a, p1 + 1)
+            m = ok[seg]
+            if m.any():
+                ratio = float(np.mean(test[seg][m] / tot[seg][m]))
+            rm = ok & (np.abs(signed - rest) <= leave)      # 휴식 구간 전체
+            if rm.any():
+                rest_r = float(np.mean(test[rm] / tot[rm]))
         cycles.append(LoadCycle(
             cycle_id=len(cycles),
             onset_time=float(time[a]), offset_time=float(time[p1]),
             rest_level=rest, load_level=load,
-            duration=float(time[p1] - time[a])))
+            duration=float(time[p1] - time[a]),
+            test_side=side, load_ratio=ratio, rest_ratio=rest_r))
     return rest, cycles
+
+
+def detect_load_cycles_expected(time: np.ndarray, signed: np.ndarray,
+                                left: Optional[np.ndarray] = None,
+                                right: Optional[np.ndarray] = None,
+                                expected: int = EXPECTED_CYCLES
+                                ) -> Tuple[float, List[LoadCycle], dict]:
+    """cycle이 정확히 expected개가 되도록 문턱을 탐색한다.
+
+    프로토콜상 모든 세션이 4회를 시행했으므로, 3회로 잡히는 것은 가장 가벼운 단계가
+    노이즈/문턱에 묻힌 것이다. enter 문턱을 낮춰가며(그리고 최소 지속시간을 완화하며)
+    4회가 나오는 조합을 찾는다. 못 찾으면 4에 가장 가까운 결과를 쓰고 info로 알린다.
+
+    Returns: (rest, cycles, info) — info={'enter','min_dur','found','searched'}
+    """
+    best = None
+    tried = 0
+    for enter in (0.10, 0.08, 0.06, 0.05, 0.04, 0.03, 0.025, 0.02):
+        for min_dur in (2.0, 1.5, 1.0):
+            tried += 1
+            rest, cyc = detect_load_cycles(time, signed, enter=enter,
+                                           leave=min(0.06, enter * 0.6),
+                                           min_dur=min_dur, left=left, right=right)
+            if len(cyc) == expected:
+                return rest, cyc, {'enter': enter, 'min_dur': min_dur,
+                                   'found': True, 'searched': tried}
+            key = (abs(len(cyc) - expected), -len(cyc))
+            if best is None or key < best[0]:
+                best = (key, rest, cyc, enter, min_dur)
+    _, rest, cyc, enter, min_dur = best
+    return rest, cyc, {'enter': enter, 'min_dur': min_dur,
+                       'found': False, 'searched': tried}
 
 
 def cycles_to_transitions(cycles: List[LoadCycle],
@@ -424,23 +491,51 @@ def validate_cycle_edges(cycles: List[LoadCycle], edge_on: np.ndarray,
         dirs.append((kind, d))
 
     n_match = sum(1 for e in events if e['edge_idx'] >= 0)
-    if n_match < len(events):
-        miss = [f"c{e['cycle']+1}{e['kind']}" for e in events if e['edge_idx'] < 0]
-        reasons.append(f'edge 누락 {len(events)-n_match}개({",".join(miss)})')
 
-    on_d = {d for k, d in dirs if k == 'on' and d}
-    off_d = {d for k, d in dirs if k == 'off' and d}
-    if len(on_d) > 1 or len(off_d) > 1:
-        reasons.append('방향 불일치(cycle마다 rise/fall이 다름)')
-    elif on_d and off_d and on_d == off_d:
-        reasons.append(f'교대 아님(시작·종료 모두 {on_d.pop()})')
+    # cycle별 요약: 같은 부하의 rise/fall은 크기가 거의 같아야 하므로, 한쪽만 살아 있어도
+    # 그 부하에서의 EAG 크기를 추정할 수 있다 → cycle은 "이벤트 ≥1개"면 측정 가능으로 본다.
+    per_cycle = []
+    for c in cycles:
+        ev = [e for e in events if e['cycle'] == c.cycle_id]
+        on_e = next((e for e in ev if e['kind'] == 'on' and e['edge_idx'] >= 0), None)
+        off_e = next((e for e in ev if e['kind'] == 'off' and e['edge_idx'] >= 0), None)
+        a_on = abs(float(edge_amp[on_e['edge_idx']])) if on_e else float('nan')
+        a_off = abs(float(edge_amp[off_e['edge_idx']])) if off_e else float('nan')
+        both = on_e is not None and off_e is not None
+        amps = [a for a in (a_on, a_off) if np.isfinite(a)]
+        asym = (abs(a_on - a_off) / max(1e-9, (a_on + a_off) / 2)) if both else float('nan')
+        opposite = (both and on_e['direction'] != off_e['direction'])
+        per_cycle.append({
+            'cycle': c.cycle_id, 'n_events': len(amps),
+            'amp_on': None if not np.isfinite(a_on) else round(a_on, 1),
+            'amp_off': None if not np.isfinite(a_off) else round(a_off, 1),
+            'amp': None if not amps else round(float(np.mean(amps)), 1),
+            'asymmetry': None if not np.isfinite(asym) else round(asym, 3),
+            'opposite_dir': bool(opposite) if both else None,
+            'load_pct': None if not np.isfinite(c.load_ratio) else round(c.load_pct, 1),
+        })
+
+    n_measured = sum(1 for p in per_cycle if p['n_events'] >= 1)
+    if cycles and n_measured < len(cycles):
+        miss = [f"c{p['cycle']+1}" for p in per_cycle if p['n_events'] == 0]
+        reasons.append(f'측정 불가 cycle {len(cycles)-n_measured}개({",".join(miss)})')
+
+    bad_dir = [f"c{p['cycle']+1}" for p in per_cycle if p['opposite_dir'] is False]
+    if bad_dir:
+        reasons.append(f'부하/이탈 방향 같음({",".join(bad_dir)})')
 
     dup = len(set(e['edge_idx'] for e in events if e['edge_idx'] >= 0))
     if dup < n_match:
         reasons.append('한 edge가 두 이벤트에 중복 매칭')
 
+    # anchor 근처가 아닌 edge = 노이즈 후보 (부하 구간 한가운데·휴식 구간에서 검출된 것)
+    matched_idx = {e['edge_idx'] for e in events if e['edge_idx'] >= 0}
+    noise = [i for i in range(len(edge_on)) if i not in matched_idx]
+
     return {'ok': not reasons, 'n_cycles': len(cycles), 'n_matched': n_match,
             'n_events': len(events), 'n_edges': int(len(edge_on)),
+            'n_measured_cycles': n_measured, 'per_cycle': per_cycle,
+            'noise_idx': noise,
             'reasons': '; '.join(reasons), 'events': events}
 
 

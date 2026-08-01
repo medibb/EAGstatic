@@ -906,7 +906,8 @@ def process_single_session(pair: SessionPair, output_dir: Path, do_phase2: bool 
             # (edge_review.py --dir data 로 그런 세션을 추린다).
             import grf_triggered_annotator as _G
             _signed_c = _G.signed_imbalance(sa.grf_left, sa.grf_right)
-            _rest, _cycles = _G.detect_load_cycles(sa.unified_time_grf, _signed_c)
+            _rest, _cycles, _cinfo = _G.detect_load_cycles_expected(
+                sa.unified_time_grf, _signed_c, sa.grf_left, sa.grf_right)
             anchors = (_G.cycles_to_transitions(_cycles, trans)
                        if len(_cycles) == _G.EXPECTED_CYCLES else trans)
             gt_resp = extract_responses(sa, anchors, te_corr, list(range(1, EEG_CHANNELS + 1)))
@@ -915,6 +916,17 @@ def process_single_session(pair: SessionPair, output_dir: Path, do_phase2: bool 
             grf_triggered_df['session'] = pair.session_name
             grf_triggered_df['n_cycles'] = len(_cycles)
             grf_triggered_df['protocol_ok'] = len(_cycles) == _G.EXPECTED_CYCLES
+            # cycle별 실측 체중부하율(%) — 설계 20-50-80-100%의 개인별 실제값
+            if len(_cycles) == _G.EXPECTED_CYCLES:
+                _cyc_of = {i: _cycles[i // 2] for i in range(2 * len(_cycles))}
+                grf_triggered_df['cycle_id'] = grf_triggered_df['trans_id'].map(
+                    lambda i: _cyc_of[i].cycle_id if i in _cyc_of else None)
+                grf_triggered_df['event_kind'] = grf_triggered_df['trans_id'].map(
+                    lambda i: ('on' if i % 2 == 0 else 'off') if i in _cyc_of else '')
+                grf_triggered_df['load_pct'] = grf_triggered_df['trans_id'].map(
+                    lambda i: round(_cyc_of[i].load_pct, 1) if i in _cyc_of else None)
+                grf_triggered_df['test_side'] = grf_triggered_df['trans_id'].map(
+                    lambda i: _cyc_of[i].test_side if i in _cyc_of else '')
 
         sa.run_analysis()
 

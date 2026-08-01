@@ -65,7 +65,8 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
     signed = G.signed_imbalance(sa.grf_left, sa.grf_right)
 
     # 프로토콜(체중부하 4 cycle × 2 = 8 이벤트) — edge 검출보다 먼저 anchor를 잡는다
-    rest, cycles = G.detect_load_cycles(tg, signed)
+    rest, cycles, cyc_info = G.detect_load_cycles_expected(
+        tg, signed, sa.grf_left, sa.grf_right)
     anchors = G.cycles_to_transitions(cycles, trans)
 
     man = edge_store.get_channel_edges(pair.subject_name, pair.session_name, channel)
@@ -91,11 +92,16 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
         'rest_level': round(float(rest), 3),
         'cycles': [{'id': c.cycle_id, 'onset': round(c.onset_time, 3),
                     'offset': round(c.offset_time, 3), 'load': round(c.load_level, 3),
-                    'step': round(c.load_step, 3)} for c in cycles],
+                    'step': round(c.load_step, 3),
+                    'load_pct': None if not np.isfinite(c.load_ratio) else round(c.load_pct, 1),
+                    'test_side': c.test_side} for c in cycles],
+        'cycle_search': cyc_info,
+        'per_cycle': valid['per_cycle'], 'noise_idx': valid['noise_idx'],
+        'n_measured_cycles': valid['n_measured_cycles'],
         'anchors': [{'t': round(a.time, 3), 'kind': 'on' if i % 2 == 0 else 'off',
                      'cycle': i // 2} for i, a in enumerate(anchors)],
         'valid': {k: valid[k] for k in ('ok', 'n_cycles', 'n_matched', 'n_events',
-                                        'n_edges', 'reasons')},
+                                        'n_edges', 'n_measured_cycles', 'reasons')},
         'events': valid['events'],
         'expected_cycles': G.EXPECTED_CYCLES, 'expected_events': G.EXPECTED_EVENTS,
         'te': r3(_ds(te, step)), 'eag': r1(_ds(eag, step)),
@@ -270,6 +276,7 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  <button id="del">Delete sel</button>
  <label><input type="checkbox" id="snap" checked> snap</label>
  <button id="fit">전체보기</button>
+ <button id="denoise" title="anchor에서 먼 edge(부하 중간·휴식 구간)를 노이즈로 보고 일괄 삭제">노이즈 삭제</button>
  <button id="save">Save</button>
  <button id="reset">Reset→auto</button>
  <span id="status"></span>
@@ -347,11 +354,14 @@ function draw(){ if(!D||!view)return; ctx.clearRect(0,0,cv.width,cv.height);
  ctx.strokeStyle='#1f77b4';ctx.lineWidth=1;ctx.beginPath();
  for(let i=0;i<D.te.length;i++){let x=X(D.te[i]),y=EY(D.eag[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
  // edges
- D.edges.forEach((e,k)=>{let amp=e.offset_amp-e.onset_amp;let col=amp>0?'#d62728':'#2ca02c';
+ const noise=new Set(D.noise_idx||[]);
+ D.edges.forEach((e,k)=>{let amp=e.offset_amp-e.onset_amp;const nz=noise.has(k);
+  let col=nz?'#aaa':(amp>0?'#d62728':'#2ca02c');
   let x1=X(e.onset_time),y1=EY(e.onset_amp),x2=X(e.offset_time),y2=EY(e.offset_amp);
-  ctx.strokeStyle=col;ctx.lineWidth=k===sel?4:2.3;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-  ctx.fillStyle=col;[[x1,y1],[x2,y2]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,k===sel?7:5,0,7);ctx.fill();});
-  ctx.fillStyle='#000';ctx.font='11px sans-serif';ctx.fillText('['+k+']',x1-16,y1-4);});
+  ctx.save();if(nz)ctx.setLineDash([3,3]);
+  ctx.strokeStyle=col;ctx.lineWidth=k===sel?4:(nz?1.3:2.3);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();
+  ctx.fillStyle=col;[[x1,y1],[x2,y2]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,k===sel?7:(nz?3:5),0,7);ctx.fill();});
+  ctx.fillStyle=nz?'#999':'#000';ctx.font='11px sans-serif';ctx.fillText('['+k+']',x1-16,y1-4);});
  // add points
  ctx.fillStyle='#ff7f0e';addPts.forEach(p=>{ctx.beginPath();ctx.arc(X(p[0]),EY(p[1]),5,0,7);ctx.fill();});
  renderTbl();
@@ -382,6 +392,11 @@ window.addEventListener('keydown',ev=>{if(ev.target.tagName==='INPUT')return;
  if(ev.key==='Delete'&&sel>=0){D.edges.splice(sel,1);sel=-1;draw();}
  if(ev.key==='f'&&D){fitView();draw();}});
 document.getElementById('fit').onclick=()=>{if(D){fitView();draw();}};
+document.getElementById('denoise').onclick=()=>{if(!D)return;
+ const nz=(D.noise_idx||[]).slice().sort((a,b)=>b-a);
+ if(!nz.length){status('노이즈로 판정된 edge 없음');return;}
+ nz.forEach(i=>D.edges.splice(i,1)); D.noise_idx=[]; sel=-1;
+ status(nz.length+'개 삭제 — Save로 확정하세요'); draw();};
 function setAdd(v){addMode=v;addPts=[];document.getElementById('addmode').classList.toggle('on',v);}
 document.getElementById('addmode').onclick=()=>setAdd(!addMode);
 document.getElementById('del').onclick=()=>{if(sel>=0){D.edges.splice(sel,1);sel=-1;draw();}};
@@ -393,16 +408,26 @@ async function load(){let s=document.getElementById('sess').value,ch=document.ge
  document.getElementById('meta').innerHTML=
   `${D.subject}/${D.session} ch${D.channel} · source=${D.source} · offset corr=${D.corrected_offset} (${D.method})`+
   `<br><b class="${v.ok?'ok':'bad'}">${v.ok?'✅ 프로토콜 충족':'⚠️ 검토 필요'}</b>`+
-  ` — cycle ${v.n_cycles}/${D.expected_cycles} · 이벤트 매칭 ${v.n_matched}/${v.n_events}`+
-  ` · edge ${v.n_edges}개` + (v.reasons?` · <span class="bad">${v.reasons}</span>`:'');
+  ` — cycle ${v.n_cycles}/${D.expected_cycles} · 측정가능 cycle ${v.n_measured_cycles}/${v.n_cycles}`+
+  ` · 이벤트 ${v.n_matched}/${v.n_events} · edge ${v.n_edges}개`+
+  ((D.noise_idx||[]).length?` · <span class="bad">노이즈 후보 ${D.noise_idx.length}개</span>`:'')+
+  (v.reasons?` · <span class="bad">${v.reasons}</span>`:'');
  status('loaded '+D.edges.length+' edges');draw();}
 document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch(api('api/save'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();if(j.error){status('ERR '+j.error);return;}
  status('✅ saved '+j.n+' edges');await load();refreshList();};   // 재검증 위해 재로드
 document.getElementById('reset').onclick=async()=>{if(!D)return;await fetch(api('api/reset'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});await load();refreshList();};
 function status(t){document.getElementById('status').textContent=t;}
-function renderTbl(){let h='<table><tr><th>id</th><th>onset</th><th>offset</th><th>amp</th><th>dir</th></tr>';
- D.edges.forEach((e,k)=>{let amp=(e.offset_amp-e.onset_amp);h+=`<tr style="${k===sel?'background:#eef':''}"><td>${k}</td><td>${e.onset_time.toFixed(2)}</td><td>${e.offset_time.toFixed(2)}</td><td>${amp.toFixed(0)}</td><td>${amp>0?'rise':'fall'}</td></tr>`;});
- document.getElementById('tbl').innerHTML=h+'</table>';}
+function renderTbl(){const noise=new Set(D.noise_idx||[]);
+ let h='<table><tr><th>id</th><th>onset</th><th>offset</th><th>amp</th><th>dir</th><th>판정</th></tr>';
+ D.edges.forEach((e,k)=>{let amp=(e.offset_amp-e.onset_amp);const nz=noise.has(k);
+  h+=`<tr style="${k===sel?'background:#eef':(nz?'color:#999':'')}"><td>${k}</td><td>${e.onset_time.toFixed(2)}</td><td>${e.offset_time.toFixed(2)}</td><td>${amp.toFixed(0)}</td><td>${amp>0?'rise':'fall'}</td><td>${nz?'노이즈':'✓'}</td></tr>`;});
+ h+='</table>';
+ if(D.per_cycle&&D.per_cycle.length){
+  h+='<table style="margin-left:12px"><tr><th>cycle</th><th>부하%</th><th>|amp| 부하</th><th>|amp| 이탈</th><th>대표 amp</th><th>비대칭</th></tr>';
+  D.per_cycle.forEach(p=>{const bad=p.n_events===0;
+   h+=`<tr style="${bad?'color:#d62728':''}"><td>c${p.cycle+1}</td><td>${p.load_pct??'-'}</td><td>${p.amp_on??'-'}</td><td>${p.amp_off??'-'}</td><td><b>${p.amp??'측정불가'}</b></td><td>${p.asymmetry??'-'}</td></tr>`;});
+  h+='</table>';}
+ document.getElementById('tbl').innerHTML='<div style="display:flex;gap:14px;align-items:flex-start">'+h+'</div>';}
 // 세션 드롭다운 — worklist(needs_review)만이 아니라 data/ 아래 전체 세션.
 // edge가 확정된 세션은 ✅와 채널 목록, offset 확정 세션은 off✅ 로 표시.
 let SESSIONS=[];
