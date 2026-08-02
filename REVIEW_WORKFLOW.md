@@ -13,33 +13,71 @@ GRF-triggered 파이프라인에서 **offset과 edge(knee)를 사람이 검토·
 
 ## 연구 프로토콜 (모든 판정의 기준)
 
+EAG(무릎 전위)가 GRF(족저 체중이동)에 반응하는지를 **점진적으로 부하를 늘린 한발서기 반복**으로
+측정한다. 아래는 코드에 구현된 실제 분석 기준과 같은 내용이다.
+원본 방법 문서는 `EAG 연구방법(26.02-03).hwp`.
+
+### 측정 순서 (세션 1회)
+
 ```
-초기 발구름(offset 세팅)  →  한발서기 4회 (체중부하를 점진적으로 늘림: 설계 20-50-80-100%)
+초기 발구름(stomp)  →  한발서기 4회 (검사측 부하를 회차마다 증가: 설계 20-50-80-100%)  →  종료
 ```
 
-- 휴식 자세 = 반대측 다리에 체중을 싣고 **검사측을 비운** 상태 (`|signed| ≈ 0.9~1.0`)
-- 부하 단계 = 검사측으로 체중을 옮기는 것. **4회 모두 시행됨**
-- 분석 대상 = 4회 각각의 **부하 시작 / 이탈** → **세션·채널당 8개 이벤트**
-- **부하가 실리면 EAG 하강(fall), 빠지면 상승(rise)** — 예외 없는 규칙.
-  따라서 **fall–rise가 4번 반복**되어 knee-pair 8개가 나온다
-- 부하 구간 음영은 **복귀 램프가 끝나는 지점(`end_time`)까지** 그린다.
-  이벤트 시각(`offset_time`)은 램프 **시작**이지만, 구간 자체는 램프를 포함해야
-  과소평가되지 않는다
-- 발구름과 프로토콜 전후의 양발 서기는 **분석에서 제외**된다
+1. **초기 발구름** — EAG-GRF 시간 동기화(offset) 세팅용. **분석 제외**
+2. **한발서기 4회** — 검사측 다리에 싣는 체중을 회차마다 점진적으로 늘린다. **4회 모두 시행됨**
+3. 프로토콜 **전후의 양발 서기(휴식)** — **분석 제외**
 
-검출 흐름:
+### 신호 구조
 
-| 함수 | 역할 |
+**GRF signed imbalance** `(L−R)/(L+R)` — 좌우 체중이동. 사각파 형태.
+
+| 개념 | 뜻 |
 |---|---|
-| `detect_load_cycles_expected()` | 휴식 레벨에서 벗어났다 돌아오는 구간 = 부하 cycle. **4회가 나올 때까지 문턱을 탐색** |
-| `cycles_to_transitions()` | cycle → 분석 anchor 8개. 시각은 `detect_grf_transitions`의 knee로 스냅해 정확도 유지 |
+| `rest_level` | 휴식 자세 plateau. 반대측 다리에 싣고 **검사측을 비운** 상태(`\|signed\| ≈ 0.9~1.0`).<br>부하 4회 **사이사이 반복해서 돌아오는** 레벨이라 plateau가 5개(부하 전/사이×3/후) |
+| `load_level` | 각 부하 구간 plateau. 회차마다 1번씩, 크기 점증 |
+| `load_step` | `load_level − rest_level` (부호 포함). 계단형으로 커진다 |
+| `load_pct` | **검사측 체중부하율(%)** = 검사측 힘 / 전체 힘, 부하 구간 평균.<br>실측 중앙값 **18 / 46 / 73 / 92%** (설계 20/50/80/100%보다 일관되게 낮음) |
+
+**EAG** — 각 부하 cycle에서 knee-pair 2개:
+**부하가 실리면 하강(fall), 빠지면 상승(rise)** — 예외 없는 규칙.
+
+### 분석 단위 (세션·채널당 8 이벤트)
+
+```
+1 cycle(한발서기 1회) = 부하 시작 anchor + 이탈 anchor = 2 이벤트
+세션·채널당 4 cycle × 2 = 8 이벤트  →  EAG knee-pair 8개 (fall–rise 4회 교대)
+```
+
+- 코드 상수: `EXPECTED_CYCLES = 4`, `EXPECTED_EVENTS = 8`, `EXPECTED_DIR = {'on':'fall','off':'rise'}`
+- 각 anchor마다 EAG **onset·offset 두 knee**로 변화 크기(`amplitude`), 전이시간, `latency`(≈0, 동시성) 기록
+- **dose-response**: EAG `|amplitude|`가 부하(`load_pct`)에 비례해 커지는지가 핵심 분석.
+  dose 축은 명목값(20/50/80/100)이 아니라 **실측 `load_pct`**를 쓴다
+- 부하 구간 음영은 **복귀 램프가 끝나는 지점(`end_time`)까지** 그린다.
+  이벤트 시각(`offset_time`)은 램프 **시작**이지만, 구간 자체는 램프를 포함해야 과소평가되지 않는다
+
+### 코드에서의 정의 (ground truth: `grf_triggered_annotator.py`)
+
+| 함수·자료구조 | 역할 |
+|---|---|
+| `LoadCycle` | 휴식→부하→복귀 1회. `load_step`(dose) · `load_pct`(실측 부하율) · `test_side` · `end_time` |
+| `detect_load_cycles_expected()` | 휴식 레벨에서 벗어났다 돌아오는 구간 = 부하 cycle. **4회가 나올 때까지 문턱을 탐색**. 발구름·전후 양발서기 배제 |
+| `cycles_to_transitions()` | cycle → 분석 anchor 8개(`role`=on/off). 시각은 `detect_grf_transitions`의 knee로 스냅해 정확도 유지 |
 | `detect_eag_edges_protocol()` | 전역 검출 + **anchor별 국소 보강**(전역 문턱에 묻힌 약한 반응 회수, 방향 규칙 준수) |
 | `match_edge()` | anchor ↔ edge 매칭. **방향 규칙을 만족하는 후보 중** 가장 가까운 것 |
 | `validate_cycle_edges()` | cycle 수 · 이벤트 매칭 · 방향 · 노이즈 판정 |
+| `label_single_sided()` | 파라미터 표에 '한쪽만 채택' 라벨 부여 |
 
 > `detect_grf_transitions`는 사각파 **진폭** 문턱(`min_amp=0.3`)을 쓰기 때문에 가장 가벼운
 > 1단계(예: signed 0.99→0.82, 진폭 0.17)를 놓친다. 그래서 cycle 검출은 진폭이 아니라
 > **"휴식 레벨로부터의 이탈"**을 문턱으로 쓴다.
+
+### 프로토콜이 지켜졌는지 확인하는 3가지 방법
+
+| 방법 | 무엇을 보나 | 명령 |
+|---|---|---|
+| **GUI (시각, 권장)** | 부하 4 cycle 음영 + anchor 8개 + `cycle n/4 · 이벤트 m/8` 실시간 검증 | `python3 edge_app.py --host 0.0.0.0 --port 8765` |
+| **배치 검증** | 전 세션·채널의 8/8 충족 여부 | `python3 edge_review.py --dir data` → `result/edge_review/all_channels.csv` |
+| **파라미터** | 이벤트별 `load_pct` · `eag_direction` · `amplitude` · `latency` | `parameter_extractor.py --batch` 산출물 |
 
 ---
 
@@ -286,4 +324,12 @@ python3 stats_grf_eag.py                      # dose-response 통계 (STATS_PLAN
 - **GUI 수정 시 검증**: canvas 코드는 문법 검사(`node --check`)로 미정의 참조를 잡지 못한다.
   실제 데이터를 넣어 `draw()`를 돌려보는 것이 안전하다 (과거 `vline` 미정의로 그래프가 통째로 안 그려진 적 있음).
 - 한글 폰트: Linux/Docker는 `pip install koreanize-matplotlib`(또는 `apt-get install -y fonts-nanum`) 후 패널 재생성 시 한글 라벨 정상 표시. macOS는 자동.
-- 상세 파일 구조·전체 파이프라인은 `README.md`, 통계 설계는 `STATS_PLAN.md` 참조.
+
+### 관련 문서
+
+| 문서 | 내용 |
+|---|---|
+| `README.md` | 전체 파일 구조·파이프라인 |
+| `STATS_PLAN.md` | 통계 설계 (dose-response) |
+| `EAG 연구방법(26.02-03).hwp` | 원본 연구방법 |
+| **이 문서** | 실험 프로토콜 + offset/edge 검토·수정 절차 (프로토콜 단일 참조본) |

@@ -90,7 +90,8 @@ EAGstatic/
 - **수동 확정 우선**: `manual_offsets.json`(offset)·`manual_edges.json`(edge). 설정 시 자동 검출을 무시하고 확정값 사용 → review 후 4단계를 재실행하면 반영됨.
 - **edge 검출 기본값**: `edge_annotator` min_amp 25, slope_k 3.0, drift ON. 동일 검출기를 GRF signed imbalance에도 적용해 전이를 검출.
 
-> ⚠️ manual review로 offset/edge를 확정한 뒤에는 4단계(`parameter_extractor --batch`)를 **다시 실행**해야 확정값과 `grf_step` 등 최신 컬럼이 반영됩니다. 상세 통계 설계는 `STATS_PLAN.md` 참조.
+> ⚠️ manual review로 offset/edge를 확정한 뒤에는 4단계(`parameter_extractor --batch`)를 **다시 실행**해야 확정값과 `load_pct`·`accepted` 등 최신 컬럼이 반영됩니다.
+> 실험 프로토콜(한발서기 4회 × 부하 시작/이탈 = 8 이벤트)과 검토 절차는 `REVIEW_WORKFLOW.md`, 상세 통계 설계는 `STATS_PLAN.md` 참조.
 
 ### 빠른 실행 (run_pipeline.py)
 
