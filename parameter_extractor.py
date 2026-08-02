@@ -929,6 +929,15 @@ def process_single_session(pair: SessionPair, output_dir: Path, do_phase2: bool 
                     lambda i: _cyc_of[i].test_side if i in _cyc_of else '')
                 # 부하/이탈 방향이 같으면 한쪽만 자동 채택하고 그 사실을 라벨로 남긴다
                 grf_triggered_df = _G.label_single_sided(grf_triggered_df)
+            # 분석 제외 라벨 (세션 전체 또는 채널별) — 값은 남기고 표시만 한다
+            import exclusion_store as _EX
+            _exc = _EX.excluded_map().get((pair.subject_name, pair.session_name), {})
+            _ses = (_exc.get('session') or {}).get('reason')
+            _chs = {c: v.get('reason') for c, v in (_exc.get('channels') or {}).items()}
+            grf_triggered_df['excluded'] = grf_triggered_df['channel'].map(
+                lambda c: bool(_ses) or c in _chs)
+            grf_triggered_df['exclude_reason'] = grf_triggered_df['channel'].map(
+                lambda c: _ses or _chs.get(c, ''))
 
         sa.run_analysis()
 

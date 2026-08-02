@@ -49,6 +49,7 @@ from sync_analyzer import find_session_pair, SyncAnalyzer
 import grf_triggered_annotator as G
 from offset_manager import (set_manual_offset, clear_manual_offset,
                             list_all_offsets, get_manual_offset)
+import exclusion_store
 
 MAX_POINTS = 20000    # 표시 다운샘플 목표 점 수 (클릭 정밀도 확보용으로 넉넉히)
 
@@ -97,8 +98,10 @@ def build_data(session_dir: str, channel: int = 1) -> dict:
     r1 = lambda a: [round(float(x), 1) for x in a]
     r3 = lambda a: [round(float(x), 3) for x in a]
 
+    exc = exclusion_store.is_excluded(pair.subject_name, pair.session_name)
     return {
         'session_dir': str(Path(session_dir)),
+        'excluded': exc,
         'subject': pair.subject_name, 'session': pair.session_name, 'channel': channel,
         'n_channels': int(sa.eag_filtered.shape[1]),
         'auto_offset': round(float(off.auto_offset), 3),
@@ -166,11 +169,14 @@ def session_index() -> list:
     wl = {(r['subject'], r['session']): r['reason'] for r in load_worklist()}
     man = {(r['subject'], r['session']): r.get('manual_offset')
            for r in list_all_offsets()}
+    exc = exclusion_store.excluded_map()
     rows = []
     for r in scan_sessions():
         key = (r['subject'], r['session'])
+        e = exc.get(key, {})
         rows.append({**r, 'reason': wl.get(key, ''), 'in_worklist': key in wl,
-                     'manual': man.get(key)})
+                     'manual': man.get(key),
+                     'excluded': (e.get('session') or {}).get('reason') if e.get('session') else None})
     # 검토 필요 세션을 위로
     rows.sort(key=lambda r: (not r['in_worklist'], r['subject'], r['session']))
     return rows
@@ -227,6 +233,15 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/clear':
                 ok = clear_manual_offset(payload['subject'], payload['session'])
                 return self._send(200, json.dumps({'ok': bool(ok)}))
+            if u.path == '/api/exclude':
+                if payload.get('remove'):
+                    ok = exclusion_store.clear_exclusion(payload['subject'], payload['session'])
+                    return self._send(200, json.dumps({'ok': bool(ok), 'excluded': None}))
+                exclusion_store.set_exclusion(
+                    payload['subject'], payload['session'],
+                    reason=payload.get('reason', '기타'), note=payload.get('note', ''))
+                return self._send(200, json.dumps({'ok': True,
+                                                   'excluded': payload.get('reason')}))
             return self._send(404, json.dumps({'error': 'not found'}))
         except Exception as e:
             return self._send(500, json.dumps({'error': f'{type(e).__name__}: {e}'},
@@ -261,6 +276,7 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
   <option value="review">검토대상 ▲</option>
   <option value="done">확정 ✅</option>
   <option value="todo">미확정</option>
+  <option value="excluded">분석제외 ⛔</option>
  </select>
  <input id="sess" placeholder="세션 디렉터리 직접 입력" size="40">
  <label>ch <input id="ch" type="number" value="1" min="1" max="8" style="width:44px"></label>
@@ -289,6 +305,12 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  <button id="fit">전체보기</button>
  <button id="save" class="primary">Save (확정)</button>
  <button id="clearman" class="danger">Clear manual</button>
+ <span style="border-left:1px solid #ccc;padding-left:8px">분석제외
+  <select id="excreason">
+   <option>노이즈</option><option>동기화불가</option><option>프로토콜이상</option>
+   <option>기록오류</option><option>기타</option>
+  </select></span>
+ <button id="excl" class="danger" title="이 세션을 분석에서 제외 라벨링">⛔ 세션 제외</button>
 </div>
 
 <div id="tip">① GRF 패널(위)에서 기준 변곡점 클릭 → ② EAG 패널(아래)에서 대응 변곡점 클릭 → 쌍 성립 시 즉시 정렬 미리보기.
@@ -447,6 +469,7 @@ function renderMeta(){
   `<span class="big">${D.subject} / ${D.session} · ch${D.channel}</span> &nbsp;|&nbsp; `+
   `auto=${D.auto_offset.toFixed(3)} · server corrected=${D.corrected_offset.toFixed(3)} (${D.method})`+
   (D.has_manual?` · <b class="ok">manual=${D.manual_offset.toFixed(3)} 확정됨</b>`:'')+
+  (D.excluded?` · <b class="warn">⛔ 분석제외 (${D.excluded.reason}${D.excluded.note?': '+D.excluded.note:''})</b>`:'')+
   `<br><span class="big">최종 offset = ${effOffset().toFixed(3)} s</span>`+
   ` (미리보기 이동 ${dlt>=0?'+':''}${dlt.toFixed(3)} s)`+
   ` &nbsp;|&nbsp; match@현재 = ${mr===null?'—':(mr*100).toFixed(0)+'%'}`+
@@ -537,6 +560,7 @@ async function load(){
  document.getElementById('ch').max=D.n_channels;
  document.getElementById('offin').value=D.corrected_offset.toFixed(3);
  fitView();
+ document.getElementById('excl').textContent = D.excluded?'⛔ 제외 해제':'⛔ 세션 제외';
  status(D.has_manual?'loaded (manual 확정본, residual 재계산 안 함)':'loaded');
  draw();
 }
@@ -553,6 +577,15 @@ document.getElementById('save').onclick=async()=>{
  status('저장됨: '+v.toFixed(3)+'s → manual_offsets.json','ok');
  await load(); refreshList();
 };
+document.getElementById('excl').onclick=async()=>{
+ if(!D)return; const on=!!D.excluded;
+ const reason=document.getElementById('excreason').value;
+ const note=on?'':(prompt('제외 사유 메모(선택):','')||'');
+ if(!confirm(`${D.subject}/${D.session}\n${on?'분석제외를 해제할까요?':'이 세션을 분석에서 제외할까요? ('+reason+')'}`))return;
+ const res=await fetch(api('api/exclude'),{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({subject:D.subject,session:D.session,reason,note,remove:on})});
+ const j=await res.json(); if(j.error){status('ERR: '+j.error,'warn');return;}
+ status(on?'분석제외 해제됨':'⛔ 분석제외로 표시됨','warn'); await load(); refreshList();};
 document.getElementById('clearman').onclick=async()=>{
  if(!D)return;
  if(!confirm(`${D.subject}/${D.session}\n수동 offset을 제거하고 자동값으로 되돌릴까요?`))return;
@@ -566,11 +599,13 @@ let SESSIONS=[];
 function renderList(){
  const sel=document.getElementById('sesslist'), f=document.getElementById('filter').value;
  const cur=document.getElementById('sess').value;
- const keep=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?x.manual!=null : x.manual==null;
+ const keep=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?x.manual!=null
+              : f==='excluded'?x.excluded!=null : x.manual==null;
  const rows=SESSIONS.filter(keep), nDone=SESSIONS.filter(x=>x.manual!=null).length;
  sel.innerHTML=`<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · 확정 ${nDone}) —</option>`;
  rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
-  o.textContent=(x.manual!=null?'✅ ':x.in_worklist?'▲ ':'　 ')+x.subject+' / '+x.session+
+  o.textContent=(x.excluded?'⛔ ':x.manual!=null?'✅ ':x.in_worklist?'▲ ':'　 ')+x.subject+' / '+x.session+
+   (x.excluded?'  [제외:'+x.excluded+']':'')+
    (x.manual!=null?`  [확정 ${Number(x.manual)>=0?'+':''}${Number(x.manual).toFixed(2)}s]`:'')+
    (x.reason?'  · '+x.reason:'');
   sel.appendChild(o);});

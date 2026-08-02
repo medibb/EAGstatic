@@ -34,6 +34,7 @@ import numpy as np
 from sync_analyzer import find_session_pair, SyncAnalyzer
 import grf_triggered_annotator as G
 import edge_store
+import exclusion_store
 
 
 @contextlib.contextmanager
@@ -82,6 +83,7 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
     e_amp = np.array([e['offset_amp'] - e['onset_amp'] for e in edges]) if edges else np.array([])
     valid = G.validate_cycle_edges(cycles, e_on, e_amp, raw_trans=trans)
 
+    exc = exclusion_store.is_excluded(pair.subject_name, pair.session_name, channel)
     step = max(1, len(te) // 20000)  # 표시 다운샘플 (확대 시 정밀도 확보용으로 넉넉히)
     r1 = lambda arr: [round(float(x), 1) for x in arr]
     r3 = lambda arr: [round(float(x), 3) for x in arr]
@@ -90,6 +92,7 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
         'corrected_offset': round(float(off.corrected_offset), 3), 'method': off.method,
         'source': source,
         'rest_level': round(float(rest), 3),
+        'excluded': exc,
         'cycles': [{'id': c.cycle_id, 'onset': round(c.onset_time, 3),
                     'offset': round(c.offset_time, 3), 'load': round(c.load_level, 3),
                     'step': round(c.load_step, 3),
@@ -173,6 +176,7 @@ def session_index() -> list:
             (int(r['channel']), int(r['n_edges'])))
     off = {(r['subject'], r['session']): r.get('manual_offset')
            for r in list_all_offsets()}
+    exc = exclusion_store.excluded_map()
 
     rows = []
     for r in scan_sessions():
@@ -186,7 +190,9 @@ def session_index() -> list:
                      'manual_offset': off.get(key),
                      'proto_ok': None if p is None else p['ok'],
                      'proto_total': None if p is None else p['total'],
-                     'proto_cycles': None if p is None else p['cycles']})
+                     'proto_cycles': None if p is None else p['cycles'],
+                     'excl_session': (exc.get(key, {}).get('session') or {}).get('reason'),
+                     'excl_channels': sorted((exc.get(key, {}).get('channels') or {}).keys())})
     # 검토 대상 먼저, 그다음 피험자/세션 순
     rows.sort(key=lambda r: (not r['in_worklist'], r['subject'], r['session']))
     return rows
@@ -238,6 +244,16 @@ class Handler(BaseHTTPRequestHandler):
                     payload['edges'], offset_used=payload.get('corrected_offset', 0.0),
                     note=payload.get('note', 'gui edit'))
                 return self._send(200, json.dumps({'ok': True, 'n': len(payload['edges'])}))
+            if u.path == '/api/exclude':
+                ch = int(payload.get('channel', 0))
+                if payload.get('remove'):
+                    ok = exclusion_store.clear_exclusion(
+                        payload['subject'], payload['session'], ch)
+                    return self._send(200, json.dumps({'ok': bool(ok)}))
+                exclusion_store.set_exclusion(
+                    payload['subject'], payload['session'], ch,
+                    reason=payload.get('reason', '기타'), note=payload.get('note', ''))
+                return self._send(200, json.dumps({'ok': True}))
             if u.path == '/api/reset':
                 ok = edge_store.clear_channel_edges(
                     payload['subject'], payload['session'], int(payload['channel']))
@@ -261,6 +277,7 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  td,th{border:1px solid #ddd;padding:2px 6px}
  #meta{font-size:13px;margin:6px 0;line-height:1.6}
  .ok{color:#2ca02c}.bad{color:#d62728}.warn{color:#c26a12}
+ button.danger{color:#d62728;border-color:#d62728}
 </style></head><body>
 <div id="bar">
  <select id="wl" title="세션 목록" style="max-width:440px"></select>
@@ -270,6 +287,7 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
   <option value="done">edge 확정 ✅</option>
   <option value="todo">edge 미확정</option>
   <option value="proto">프로토콜 미충족 ⚠️</option>
+  <option value="excluded">분석제외 ⛔</option>
  </select>
  <input id="sess" placeholder="session dir (또는 목록 선택)" size="30">
  <label>ch <input id="ch" type="number" value="1" min="1" max="8" style="width:44px"></label>
@@ -285,6 +303,13 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  <button id="denoise" title="anchor에서 먼 edge(부하 중간·휴식 구간)를 노이즈로 보고 일괄 삭제">노이즈 삭제</button>
  <button id="save">Save</button>
  <button id="reset">Reset→auto</button>
+ <span style="border-left:1px solid #ccc;padding-left:8px">분석제외
+  <select id="excreason">
+   <option>노이즈</option><option>동기화불가</option><option>프로토콜이상</option>
+   <option>기록오류</option><option>기타</option>
+  </select></span>
+ <button id="exclCh" class="danger">⛔ 채널 제외</button>
+ <button id="exclSes" class="danger">⛔ 세션 제외</button>
  <span id="status"></span>
 </div>
 <div id="tip">드래그=knee 이동 · Add mode 후 트레이스 2점 클릭=edge 추가 · edge 클릭 선택 후 Delete/Del키 · rise=빨강 fall=초록
@@ -431,6 +456,19 @@ document.getElementById('panL').onclick=()=>panBy(-0.25);
 document.getElementById('panR').onclick=()=>panBy(0.25);
 document.getElementById('evL').onclick=()=>gotoEvent(-1);
 document.getElementById('evR').onclick=()=>gotoEvent(1);
+async function toggleExclude(scope){
+ if(!D)return; const ch=scope==='session'?0:D.channel;
+ const cur=D.excluded && ((scope==='session')===(D.excluded.scope==='session'));
+ const reason=document.getElementById('excreason').value;
+ const tgt=scope==='session'?'세션 전체':('ch'+D.channel);
+ if(!confirm(`${D.subject}/${D.session} ${tgt}\n${cur?'분석제외를 해제할까요?':'분석에서 제외할까요? ('+reason+')'}`))return;
+ const note=cur?'':(prompt('제외 사유 메모(선택):','')||'');
+ const res=await fetch(api('api/exclude'),{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({subject:D.subject,session:D.session,channel:ch,reason,note,remove:!!cur})});
+ const j=await res.json(); if(j.error){status('ERR '+j.error);return;}
+ status(cur?'분석제외 해제됨':'⛔ 분석제외로 표시됨'); await load(); refreshList();}
+document.getElementById('exclCh').onclick=()=>toggleExclude('channel');
+document.getElementById('exclSes').onclick=()=>toggleExclude('session');
 document.getElementById('fit').onclick=()=>{if(D){fitView();draw();}};
 document.getElementById('denoise').onclick=()=>{if(!D)return;
  const nz=(D.noise_idx||[]).slice().sort((a,b)=>b-a);
@@ -450,10 +488,14 @@ async function load(){let s=document.getElementById('sess').value,ch=document.ge
   `<br><b class="${v.priority==='high'?'bad':(v.priority==='low'?'warn':'ok')}">`+
   `${v.priority==='high'?'⚠️ 검토 필요':(v.priority==='low'?'🟡 후순위 검토(한쪽만 채택)':'✅ 프로토콜 충족')}</b>`+
   (v.labels?` <span class="warn">${v.labels}</span>`:'')+
+  (D.excluded?` <b class="bad">⛔ 분석제외(${D.excluded.scope==='session'?'세션':'채널'}: ${D.excluded.reason}${D.excluded.note?', '+D.excluded.note:''})</b>`:'')+
   ` — cycle ${v.n_cycles}/${D.expected_cycles} · 측정가능 cycle ${v.n_measured_cycles}/${v.n_cycles}`+
   ` · 이벤트 ${v.n_matched}/${v.n_events} · edge ${v.n_edges}개`+
   ((D.noise_idx||[]).length?` · <span class="bad">노이즈 후보 ${D.noise_idx.length}개</span>`:'')+
   (v.reasons?` · <span class="bad">${v.reasons}</span>`:'');
+ const ex=D.excluded;
+ document.getElementById('exclCh').textContent=(ex&&ex.scope==='channel')?'⛔ 채널 제외해제':'⛔ 채널 제외';
+ document.getElementById('exclSes').textContent=(ex&&ex.scope==='session')?'⛔ 세션 제외해제':'⛔ 세션 제외';
  status('loaded '+D.edges.length+' edges');draw();}
 document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch(api('api/save'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();if(j.error){status('ERR '+j.error);return;}
  status('✅ saved '+j.n+' edges');await load();refreshList();};   // 재검증 위해 재로드
@@ -480,13 +522,16 @@ function renderList(){
  const cur=document.getElementById('sess').value;
  const done=x=>x.edge_channels.length>0;
  const proto=x=>x.proto_total&&x.proto_ok<x.proto_total;
+ const isExc=x=>x.excl_session||(x.excl_channels&&x.excl_channels.length);
  const keep=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?done(x)
-              : f==='proto'?proto(x) : !done(x);
+              : f==='proto'?proto(x) : f==='excluded'?isExc(x) : !done(x);
  const rows=SESSIONS.filter(keep), nDone=SESSIONS.filter(done).length;
  sel.innerHTML=`<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · edge확정 ${nDone}) —</option>`;
  rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
   const pr = x.proto_total ? (x.proto_ok===x.proto_total?'✅':'⚠️')+x.proto_ok+'/'+x.proto_total : '';
-  o.textContent=(done(x)?'✔ ':x.in_worklist?'▲ ':'　 ')+x.subject+' / '+x.session+
+  const ex = x.excl_session?('제외:'+x.excl_session):(x.excl_channels&&x.excl_channels.length?('제외 ch'+x.excl_channels.join(',')):'');
+  o.textContent=(x.excl_session?'⛔ ':done(x)?'✔ ':x.in_worklist?'▲ ':'　 ')+x.subject+' / '+x.session+
+   (ex?'  ['+ex+']':'')+
    (pr?'  [프로토콜 '+pr+(x.proto_cycles!=null&&x.proto_cycles!==4?' cyc'+x.proto_cycles:'')+']':'')+
    (done(x)?'  [edge ch'+x.edge_channels.join(',')+']':'')+
    (x.manual_offset!=null?'  [off✅]':'')+

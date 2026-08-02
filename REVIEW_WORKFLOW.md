@@ -270,6 +270,41 @@ python3 edge_editor.py list                                          # 확정 �
 
 ---
 
+## Step 2.5. 분석 제외 라벨링 (offset·edge 검토 중 언제든)
+
+검토하다 "이건 분석에 못 쓴다"고 판단되면 **지우지 말고 라벨만 붙인다**.
+판단 근거가 남아야 나중에 재검토하거나 사유별로 집계할 수 있다.
+`result/exclusions.json`에 저장되고, 통계 단계에서 자동으로 걸러진다.
+
+**범위 2가지**
+- **세션 전체** — 동기화 자체가 불가하거나 프로토콜이 깨진 경우 (모든 채널에 적용)
+- **채널만** — 그 채널의 EAG만 못 쓰는 경우
+
+**사유(표준 목록)**: `노이즈` · `동기화불가` · `프로토콜이상` · `기록오류` · `기타`
++ 자유 메모
+
+**GUI**
+- offset_app : `⛔ 세션 제외` 버튼 (사유 선택 → 메모 입력). 확정 세션은 드롭다운에
+  `⛔ … [제외:동기화불가]`로 표시되고 필터 `분석제외 ⛔`로 모아볼 수 있다
+- edge_app : `⛔ 채널 제외` / `⛔ 세션 제외` 버튼. 드롭다운에 `[제외 ch3,5]` 표시,
+  같은 필터 제공. 제외된 채널은 edge worklist에서 빠진다(검토 요구하지 않음)
+
+**CLI**
+```bash
+python3 exclusion_store.py --list
+python3 exclusion_store.py --set --subject "(02.02_10)주창민_1" --session s1 \
+        --channel 3 --reason 노이즈 --note "드리프트 심함"   # channel 0 = 세션 전체
+python3 exclusion_store.py --clear --subject "..." --session s1 --channel 3
+```
+
+**파이프라인 반영**
+- `parameter_extractor` → `excluded`(bool) · `exclude_reason` 컬럼
+- `stats_grf_eag` → 시작 시 `excluded=True` 행을 자동 제외하고 몇 행을 뺐는지 출력
+  (`accepted=False`인 방향 오염 행도 함께 제외)
+- `edge_review` → 제외된 채널은 `priority=''`로 두어 worklist에 올리지 않는다
+
+---
+
 ## Step 3. 확정 후 재추출·통계
 
 ```bash
@@ -309,8 +344,8 @@ python3 stats_grf_eag.py                      # dose-response 통계 (STATS_PLAN
   → 다 끝나면 edge_review --dir data 재실행 → parameter_extractor --batch → stats_grf_eag
 ```
 
-핵심 산출물: `result/manual_offsets.json`(확정 offset), `result/manual_edges.json`(확정 edge).
-이 둘만 채워지면 재추출 시 전부 자동 반영된다.
+핵심 산출물: `result/manual_offsets.json`(확정 offset) · `result/manual_edges.json`(확정 edge)
+· `result/exclusions.json`(분석 제외 라벨). 이 셋만 채워지면 재추출 시 전부 자동 반영된다.
 
 ---
 

@@ -68,6 +68,21 @@ def load_pooled(exclude_review: bool, all_channels: bool) -> pd.DataFrame:
 
     df = df[df['matched'] == True].copy()
 
+    # 분석 제외 라벨(exclusions.json)이 붙은 세션/채널 제거.
+    # 컬럼이 없으면(구 스키마) 건너뛴다 — 재추출하면 생긴다.
+    if 'excluded' in df.columns:
+        n0 = len(df)
+        df = df[~df['excluded'].fillna(False).astype(bool)].copy()
+        if n0 != len(df):
+            print(f"  분석제외 라벨로 {n0 - len(df)}행 제외 (남은 {len(df)}행)")
+
+    # 방향 오염으로 한쪽만 채택된 행 중 폐기된 쪽 제거
+    if 'accepted' in df.columns:
+        n0 = len(df)
+        df = df[df['accepted'].fillna(True).astype(bool)].copy()
+        if n0 != len(df):
+            print(f"  방향 불일치로 폐기된 {n0 - len(df)}행 제외 (남은 {len(df)}행)")
+
     # 품질 병합 (cross_params)
     qfiles = _inputs('eag_grf_cross_params')
     if qfiles and not all_channels:

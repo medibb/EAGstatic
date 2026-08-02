@@ -31,6 +31,7 @@ from scipy.signal import detrend
 from sync_analyzer import find_session_pair, SyncAnalyzer
 import grf_triggered_annotator as G
 import edge_store
+import exclusion_store
 
 REVIEW_DIR = Path('result') / 'edge_review'
 WORKLIST = REVIEW_DIR / 'worklist.csv'
@@ -97,6 +98,10 @@ def diagnose_session(session_dir: str, channels=None, pending_keys=None) -> list
             e_amp = np.array([e[4] - e[1] for e in auto]) if auto else np.array([])
             source = 'auto'
         v = G.validate_cycle_edges(cycles, e_on, e_amp, raw_trans=trans)
+        ex = exclusion_store.is_excluded(pair.subject_name, pair.session_name, ch)
+        if ex:                      # 분석 제외 라벨이 붙었으면 검토 대상에서 뺀다
+            v = {**v, 'priority': '', 'ok': False,
+                 'reasons': f"분석제외({ex['reason']})"}
         rows.append({
             'subject': pair.subject_name, 'session': pair.session_name, 'channel': ch,
             'source': source, 'ok': v['ok'],
@@ -116,6 +121,8 @@ def diagnose_session(session_dir: str, channels=None, pending_keys=None) -> list
             'corrected_offset': round(float(off.corrected_offset), 3),
             'offset_source': 'manual' if has_manual else 'auto',
             'offset_pending': pending,
+            'excluded': (ex or {}).get('reason', ''),
+            'excluded_scope': (ex or {}).get('scope', ''),
             'reasons': v['reasons'], 'session_dir': str(session_dir),
         })
     return rows
