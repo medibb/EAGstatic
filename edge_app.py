@@ -277,6 +277,10 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  <button id="addmode">Add mode</button>
  <button id="del">Delete sel</button>
  <label><input type="checkbox" id="snap" checked> snap</label>
+ <button id="panL" title="왼쪽으로 이동 (← 키)">◀</button>
+ <button id="panR" title="오른쪽으로 이동 (→ 키)">▶</button>
+ <button id="evL" title="이전 이벤트로 (Shift+←)">◀이벤트</button>
+ <button id="evR" title="다음 이벤트로 (Shift+→)">이벤트▶</button>
  <button id="fit">전체보기</button>
  <button id="denoise" title="anchor에서 먼 edge(부하 중간·휴식 구간)를 노이즈로 보고 일괄 삭제">노이즈 삭제</button>
  <button id="save">Save</button>
@@ -284,7 +288,8 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  <span id="status"></span>
 </div>
 <div id="tip">드래그=knee 이동 · Add mode 후 트레이스 2점 클릭=edge 추가 · edge 클릭 선택 후 Delete/Del키 · rise=빨강 fall=초록
-<br><b>휠=가로축 확대/축소</b> (커서 위치 기준) · <b>Shift+드래그 또는 휠버튼 드래그=좌우 이동</b> · f키/전체보기=원래대로 · 확대할수록 snap 범위도 좁아져 정밀해진다
+<br><b>휠=확대/축소</b>(커서 기준) · <b>빈 공간 드래그=좌우 이동</b>(Shift+드래그·휠버튼도 가능) · <b>Shift+휠</b>=좌우 이동
+ · <b>← →</b> 이동, <b>Shift+← →</b> 이전/다음 이벤트로 점프, <b>Home/End</b> 처음/끝, <b>f</b> 전체보기 · 확대할수록 snap 범위도 좁아져 정밀해진다
 <br>주황 음영=체중부하 cycle(프로토콜 4회) · 세로 점선=분석 anchor 8개(빨강=부하 시작, 파랑=이탈) · <b class="bad">굵은 빨강="누락"</b>=그 anchor에 knee가 없음 → 그 자리에 edge를 추가하세요</div>
 <canvas id="cv" width="1400" height="600"></canvas>
 <div id="meta"></div><div id="tbl"></div>
@@ -298,6 +303,23 @@ let D=null, sel=-1, addPts=[], addMode=false, drag=null;
 let view=null, pan=null;                    // view=[t0,t1] 표시 구간, pan=이동 중 상태
 const M={l:55,r:15,t:15,b:34}, GH=140; // GRF strip height
 function fitView(){view=[D.te[0], D.te[D.te.length-1]];}
+function dataRange(){return [D.te[0], D.te[D.te.length-1]];}
+function clampView(){                       // 데이터 밖으로 벗어나지 않게
+ if(!D||!view)return; const [t0,t1]=dataRange(); let s=view[1]-view[0];
+ if(s>=t1-t0){view=[t0,t1];return;}
+ if(view[0]<t0)view=[t0,t0+s]; if(view[1]>t1)view=[t1-s,t1];}
+function panBy(frac){                       // 보이는 폭의 frac 만큼 좌우 이동
+ if(!D||!view)return; const s=view[1]-view[0];
+ view=[view[0]+s*frac, view[1]+s*frac]; clampView(); draw();}
+function centerOn(t){                       // 배율 유지한 채 t를 화면 중앙으로
+ if(!D||!view)return; const s=view[1]-view[0];
+ view=[t-s/2, t+s/2]; clampView(); draw();}
+function gotoEvent(dir){                    // 이전/다음 anchor로 점프
+ if(!D||!view)return; const ts=(D.anchors||[]).map(a=>a.t).sort((x,y)=>x-y);
+ if(!ts.length)return; const c=(view[0]+view[1])/2, eps=1e-3;
+ const cand = dir>0 ? ts.filter(t=>t>c+eps) : ts.filter(t=>t<c-eps);
+ if(!cand.length)return;
+ centerOn(dir>0?cand[0]:cand[cand.length-1]);}
 function xr(){return view;}
 function PW(){return cv.width-M.l-M.r;}
 // y축은 보이는 구간 기준으로 자동 스케일 (확대 시 파형이 납작해지지 않게).
@@ -379,20 +401,36 @@ cv.addEventListener('mousedown',ev=>{if(!D)return;let r=cv.getBoundingClientRect
    if(addPts.length===2){addPts.sort((p,q)=>p[0]-q[0]);D.edges.push({onset_time:addPts[0][0],onset_amp:addPts[0][1],offset_time:addPts[1][0],offset_amp:addPts[1][1]});D.edges.sort((p,q)=>p.onset_time-q.onset_time);addPts=[];setAdd(false);}
    draw();return;}
  let h=hitKnee(mx,my); if(h){drag=h;sel=h.k;draw();return;}
- let ek=hitEdge(mx,my); sel=ek; draw();});
+ let ek=hitEdge(mx,my);
+ if(ek>=0){sel=ek;draw();return;}
+ pan={x:mx,v0:[...view],moved:false};    // 빈 공간 드래그 = 좌우 이동 (클릭만 하면 선택 해제)
+ ev.preventDefault();});
 cv.addEventListener('mousemove',ev=>{if(!D)return;let r=cv.getBoundingClientRect(),mx=ev.clientX-r.left;
- if(pan){let dt=(mx-pan.x)/PW()*(pan.v0[1]-pan.v0[0]);view=[pan.v0[0]-dt,pan.v0[1]-dt];draw();return;}
+ if(pan){const dx=mx-pan.x; if(Math.abs(dx)>3)pan.moved=true;
+  let dt=dx/PW()*(pan.v0[1]-pan.v0[0]);view=[pan.v0[0]-dt,pan.v0[1]-dt];clampView();draw();return;}
  if(!drag)return;let t=Tinv(mx);
  let[st,sv]=snapCorner(t);let e=D.edges[drag.k];if(drag.kn==='on'){e.onset_time=st;e.onset_amp=sv;}else{e.offset_time=st;e.offset_amp=sv;}draw();});
-window.addEventListener('mouseup',()=>{pan=null;if(drag){D.edges.sort((p,q)=>p.onset_time-q.onset_time);drag=null;draw();}});
+window.addEventListener('mouseup',()=>{
+ if(pan&&!pan.moved&&sel>=0){sel=-1;draw();}   // 빈 공간 클릭(이동 없음) = 선택 해제
+ pan=null;
+ if(drag){D.edges.sort((p,q)=>p.onset_time-q.onset_time);drag=null;draw();}});
 // 휠 = 커서 위치 기준 가로축 확대/축소
 cv.addEventListener('wheel',ev=>{if(!D||!view)return;ev.preventDefault();
  let r=cv.getBoundingClientRect(),mx=ev.clientX-r.left; if(mx<M.l||mx>M.l+PW())return;
+ if(ev.shiftKey){panBy(ev.deltaY>0?0.2:-0.2);return;}   // Shift+휠 = 좌우 이동
  let t=Tinv(mx),f=ev.deltaY>0?1.2:1/1.2;
- view=[t-(t-view[0])*f, t+(view[1]-t)*f]; draw();},{passive:false});
+ view=[t-(t-view[0])*f, t+(view[1]-t)*f]; clampView(); draw();},{passive:false});
 window.addEventListener('keydown',ev=>{if(ev.target.tagName==='INPUT')return;
  if(ev.key==='Delete'&&sel>=0){D.edges.splice(sel,1);sel=-1;draw();}
- if(ev.key==='f'&&D){fitView();draw();}});
+ if(ev.key==='f'&&D){fitView();draw();}
+ if(ev.key==='ArrowLeft'){ev.preventDefault(); ev.shiftKey?gotoEvent(-1):panBy(-0.25);}
+ if(ev.key==='ArrowRight'){ev.preventDefault(); ev.shiftKey?gotoEvent(1):panBy(0.25);}
+ if(ev.key==='Home'&&D){const [t0]=dataRange(); centerOn(t0);}
+ if(ev.key==='End'&&D){const r=dataRange(); centerOn(r[1]);}});
+document.getElementById('panL').onclick=()=>panBy(-0.25);
+document.getElementById('panR').onclick=()=>panBy(0.25);
+document.getElementById('evL').onclick=()=>gotoEvent(-1);
+document.getElementById('evR').onclick=()=>gotoEvent(1);
 document.getElementById('fit').onclick=()=>{if(D){fitView();draw();}};
 document.getElementById('denoise').onclick=()=>{if(!D)return;
  const nz=(D.noise_idx||[]).slice().sort((a,b)=>b-a);
