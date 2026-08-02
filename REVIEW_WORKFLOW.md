@@ -189,8 +189,18 @@ python3 edge_review.py --list                      # 요약
 - `result/edge_review/all_channels.csv` — 전 채널
 
 주요 컬럼: `priority · labels · ok · n_cycles · n_measured_cycles · n_matched · n_edges ·
-n_single_sided · n_noise · load_pct · amp · asym`
+n_single_sided · n_noise · load_pct · amp · asym · offset_source · offset_pending`
 (`load_pct`/`amp`/`asym`는 cycle 4개 값을 `;`로 이어붙인 문자열)
+
+> **`offset_pending=True`인 행은 offset이 아직 확정되지 않은 세션**의 결과다.
+> 자동 주석 자체는 전 세션에 대해 수행되지만, 그 기준 시간축이 바뀔 수 있으므로
+> **이 세션들의 edge를 손으로 고치는 것은 헛수고가 된다**(edge는 `te_corr` 프레임에
+> 저장되므로 offset이 바뀌면 전부 어긋난다). 대원칙 "offset 먼저, edge 나중" 그대로다.
+>
+> 실제로 offset 미확정 세션은 결과가 눈에 띄게 나쁘다 — 통과 77.9% vs 88.1%,
+> `high` 22.1% vs 11.9%. cycle 검출률은 차이가 없다(95.5% vs 96.0%).
+> cycle은 GRF만으로 잡히고 offset과 무관한 반면, EAG-anchor 매칭은 offset 오차에
+>직접 깨지기 때문이다. **offset을 확정하면 edge 결과가 상당수 저절로 좋아진다.**
 
 ### 방법 A: GUI (권장)
 

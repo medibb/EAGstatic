@@ -46,19 +46,41 @@ def _quiet():
         sys.stdout = old
 
 
-def diagnose_session(session_dir: str, channels=None) -> list:
-    """세션의 채널별 프로토콜 적합성 진단. 채널당 dict 1개 반환."""
+def _offset_worklist_keys() -> set:
+    """offset 수동검토가 아직 필요한 세션 (subject, session) 집합."""
+    p = Path('result/offset_review/worklist.csv')
+    if not p.exists():
+        return set()
+    import csv as _csv
+    with open(p, encoding='utf-8') as f:
+        return {(r['subject'], r['session']) for r in _csv.DictReader(f)}
+
+
+def diagnose_session(session_dir: str, channels=None, pending_keys=None) -> list:
+    """세션의 채널별 프로토콜 적합성 진단. 채널당 dict 1개 반환.
+
+    offset이 아직 확정되지 않은 세션(offset worklist)은 auto offset 기준 결과이므로
+    offset_pending=True로 표시한다. offset을 확정하면 edge 결과가 달라질 수 있다.
+    """
     pair = find_session_pair(session_dir)
     if pair is None:
         raise FileNotFoundError(f"EAG+GRF 쌍 없음: {session_dir}")
+    # 수동 확정 offset이 있으면 그것이 최종값 → residual 재계산 금지
+    # (parameter_extractor·offset_app과 같은 규칙. 안 그러면 확정값 위에 보정이 덧붙는다)
+    from offset_manager import get_manual_offset
+    has_manual = get_manual_offset(pair.subject_name, pair.session_name) is not None
     with _quiet():
         sa = SyncAnalyzer(pair)
-        off, trans, signed, _ = G.compute_offset(sa, 0, True)
+        off, trans, signed, _ = G.compute_offset(sa, 0, not has_manual)
     te = sa.unified_time_eag - off.residual
     rest, cycles, _cinfo = G.detect_load_cycles_expected(
         sa.unified_time_grf, signed, sa.grf_left, sa.grf_right)
     anchors = G.cycles_to_transitions(cycles, trans)
 
+    if pending_keys is None:
+        pending_keys = _offset_worklist_keys()
+    # 확정된 세션은 worklist에 남아 있어도 대기 아님
+    pending = (not has_manual) and (pair.subject_name, pair.session_name) in pending_keys
     n_ch = int(sa.eag_filtered.shape[1])
     chans = channels or list(range(1, n_ch + 1))
     rows = []
@@ -92,6 +114,8 @@ def diagnose_session(session_dir: str, channels=None) -> list:
             'n_noise': len(v['noise_idx']),
             'rest_level': round(rest, 3),
             'corrected_offset': round(float(off.corrected_offset), 3),
+            'offset_source': 'manual' if has_manual else 'auto',
+            'offset_pending': pending,
             'reasons': v['reasons'], 'session_dir': str(session_dir),
         })
     return rows
@@ -101,12 +125,13 @@ def scan(base_dir: str, only_bad: bool = True):
     """전 세션 스캔 → worklist.csv."""
     from offset_app import scan_sessions
     sessions = scan_sessions()
-    print(f"프로토콜 검토 스캔: {len(sessions)}개 세션 "
+    pending = _offset_worklist_keys()
+    print(f"프로토콜 검토 스캔: {len(sessions)}개 세션 (offset 미확정 {len(pending)}개 포함) "
           f"(기대: cycle {G.EXPECTED_CYCLES}회 · 이벤트 {G.EXPECTED_EVENTS}개)")
     all_rows, err = [], 0
     for i, s in enumerate(sessions):
         try:
-            all_rows.extend(diagnose_session(s['dir']))
+            all_rows.extend(diagnose_session(s['dir'], pending_keys=pending))
         except Exception as e:
             err += 1
             all_rows.append({'subject': s['subject'], 'session': s['session'],
