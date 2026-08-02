@@ -35,7 +35,11 @@ Thumbs.db
 data/
 
 # Results (generated)
-result/
+# result/ 전체는 무시하되, 사람이 확정한 작은 JSON은 버전관리·공유(연구원 주석 인계)
+result/*
+!result/manual_offsets.json
+!result/manual_edges.json
+!result/exclusions.json
 results/
 
 # Synology NAS artifacts

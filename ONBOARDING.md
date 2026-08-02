@@ -1,0 +1,77 @@
+# 연구원 온보딩 — offset / edge annotation
+
+EAGstatic의 **offset·edge 수동 확정** 작업을 위임받은 연구원용 안내.
+방식: **공유 code-server 환경**에서 브라우저로만 작업한다 (설치·데이터 복사·git 불필요).
+
+## 0. 준비물
+
+- **웹 브라우저** + **code-server 로그인 계정** (교수님이 부여)
+- 그게 전부입니다. 파이썬 설치, 데이터 복사, git clone **모두 불필요** — 데이터·앱·결과가 서버에 이미 있습니다.
+
+## 1. 무엇을 하는 작업인가 (먼저 읽기)
+
+- 이 연구는 **점진적 한발 반복부하** 프로토콜입니다. 세션당 **한발서기 4회**, 각 회차마다 부하가 커집니다.
+- 목표: 각 부하의 **시작/이탈 시점**에 GRF와 EAG 신호를 정확히 맞추는 것.
+- 자세한 프로토콜과 작업 상세: **`REVIEW_WORKFLOW.md`** (상단 "연구 프로토콜" 섹션 먼저 5분).
+- 핵심 규칙 두 개만 기억: **① offset 먼저, edge 나중** · **② 부하가 실리면 EAG 하강(fall), 빠지면 상승(rise)**.
+
+## 2. 접속 (두 개의 GUI)
+
+브라우저에서 아래 주소를 엽니다 (**끝 슬래시 `/` 필수**, code-server에 로그인된 상태여야 함):
+
+| 작업 | 주소 |
+|------|------|
+| **① offset 맞추기** | `http://medibb.synology.me:18440/proxy/8766/` |
+| **② edge 맞추기** | `http://medibb.synology.me:18440/proxy/8765/` |
+
+> 접속이 안 되면 앱이 꺼져 있는 것입니다. 교수님께 요청하거나, code-server 터미널에서:
+> ```bash
+> cd ~/.../EAGstatic
+> python3 offset_app.py --host 0.0.0.0 --port 8766   # 켜두고
+> python3 edge_app.py   --host 0.0.0.0 --port 8765   # 다른 터미널 탭에서
+> ```
+
+## 3. 작업 순서
+
+### Step 1. OFFSET (반드시 먼저) — `.../proxy/8766/`
+1. 상단 드롭다운에서 세션 선택 (검토대상 `▲`이 위로 정렬됨). 필터로 `검토대상`만 볼 수 있음
+2. 아래 **CORRECTED 정렬이 잘 맞으면** 그대로 두고 다음 세션으로 (손댈 것 없음)
+3. 안 맞으면 → **위 GRF 패널에서 기준점 클릭 → 아래 EAG 패널에서 대응점 클릭** (쌍 성립, EAG가 겹치게 이동). 쌍을 2~3개 찍으면 더 안정적
+4. 맞으면 **Save** → 확정. (`✅ [확정 …s]` 표시)
+
+### Step 2. EDGE (offset 확정 후) — `.../proxy/8765/`
+1. 드롭다운에서 세션 선택 + 채널(`ch`) 지정. 상단에 **`cycle n/4 · 이벤트 m/8`** 검증이 뜸
+2. 화면에 **부하 4구간 음영 + anchor 8개**(빨강=부하시작/파랑=이탈)가 그려짐. **굵은 빨강 `누락`** = 그 자리에 edge가 없다는 뜻
+3. 수정: knee 점 **드래그**로 이동 · **Add mode** 후 2점 클릭으로 추가 · 잘못된 것 선택 후 **Delete** · **snap** 체크로 corner 자동정렬
+4. **`✅ 프로토콜 충족`(8/8)** 이 되면 **Save**
+
+> 방향 규칙 위반(부하인데 상승 등)이면 잘못 잡힌 것이니 지우고 다시. 애매하면 표에 `후보`/`한쪽만 채택`으로 남겨두고 넘어가도 됩니다.
+
+## 4. 저장·인계
+
+- **Save를 누르면 서버의 공유 `result/`에 즉시 기록**됩니다 (`manual_offsets.json` / `manual_edges.json`). 따로 보낼 것 없습니다.
+- 확정값을 git 이력으로 남기려면 (선택):
+  ```bash
+  git add result/manual_offsets.json result/manual_edges.json result/exclusions.json
+  git commit -m "annotate: offset/edge 확정 (연구원)"
+  git pull --rebase && git push        # 커밋 전 pull 권장
+  ```
+  (대용량 데이터·중간결과는 `.gitignore`로 자동 제외, 이 3개 JSON만 추적됩니다.)
+
+## 5. 진행 현황 확인
+
+```bash
+python3 offset_review.py --list     # offset 확정된 세션
+python3 edge_editor.py list          # edge 확정된 세션·채널
+python3 edge_review.py --list        # edge 검토 대상 요약 (8/8 미충족)
+```
+
+## 6. 반드시 지킬 것 (안전)
+
+- **offset을 확정하기 전에 edge를 손대지 말 것** (edge는 보정된 시간축에 저장되어, offset이 바뀌면 전부 어긋남).
+- **port 3002는 절대 사용/종료 금지** (api-server 전용). GUI는 8765/8766만.
+- 여러 사람이 같은 세션을 동시에 저장하면 **마지막 저장이 이깁니다**. 세션을 나눠 맡으세요.
+
+## 문의·참고
+
+- 프로토콜·작업 상세: `REVIEW_WORKFLOW.md` · 전체 구조: `README.md`
