@@ -1,0 +1,61 @@
+{
+  "(02.10_15)김영훈_1": {
+    "s3": {
+      "1": {
+        "edges": [
+          {
+            "onset_time": 15,
+            "onset_amp": 153.9,
+            "offset_time": 15.208,
+            "offset_amp": 111.5
+          },
+          {
+            "onset_time": 19.272,
+            "onset_amp": 96.7,
+            "offset_time": 20.204,
+            "offset_amp": 121.2
+          },
+          {
+            "onset_time": 24.348,
+            "onset_amp": 126.2,
+            "offset_time": 24.84,
+            "offset_amp": 48
+          },
+          {
+            "onset_time": 28.88,
+            "onset_amp": -57.8,
+            "offset_time": 29.244,
+            "offset_amp": -7.9
+          },
+          {
+            "onset_time": 34.12,
+            "onset_amp": 143.4,
+            "offset_time": 34.62,
+            "offset_amp": 58.6
+          },
+          {
+            "onset_time": 39.492,
+            "onset_amp": 52.1,
+            "offset_time": 39.964,
+            "offset_amp": 106.7
+          },
+          {
+            "onset_time": 44.648,
+            "onset_amp": 51.9,
+            "offset_time": 45.364,
+            "offset_amp": -81.1
+          },
+          {
+            "onset_time": 49.792,
+            "onset_amp": -110.5,
+            "offset_time": 50.552,
+            "offset_amp": 31.5
+          }
+        ],
+        "offset_used": -0.264,
+        "updated_at": "2026-08-01T15:33:42",
+        "note": "gui edit"
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "(02.02_13)김현진_1": {
+    "c4": {
+      "manual_offset": -0.09093610698365495,
+      "auto_offset": -4.4,
+      "auto_method": "large-offset review (edge-align=-5.66)",
+      "updated_at": "2026-08-01T14:53:10",
+      "note": "gui point-pick"
+    },
+    "ct": {
+      "manual_offset": -0.264,
+      "auto_offset": -0.844,
+      "auto_method": "grf-edge-align (4/9, med=+0.01s)",
+      "updated_at": "2026-08-02T01:30:29",
+      "note": "gui point-pick"
+    }
+  }
+}
