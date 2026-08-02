@@ -26,10 +26,11 @@ EAGstatic의 **offset·edge 수동 확정** 작업을 위임받은 연구원용 
 
 > 접속이 안 되면 앱이 꺼져 있는 것입니다. 교수님께 요청하거나, code-server 터미널에서:
 > ```bash
-> cd ~/.../EAGstatic
+> cd /workspace/research/EAGstatic
 > python3 offset_app.py --host 0.0.0.0 --port 8766   # 켜두고
 > python3 edge_app.py   --host 0.0.0.0 --port 8765   # 다른 터미널 탭에서
 > ```
+> 터미널을 닫으면 앱도 꺼집니다. 계속 띄워두려면 각각 별도 탭에서 실행한 채 두세요.
 
 ## 3. 작업 순서
 
@@ -47,16 +48,35 @@ EAGstatic의 **offset·edge 수동 확정** 작업을 위임받은 연구원용 
 
 > 방향 규칙 위반(부하인데 상승 등)이면 잘못 잡힌 것이니 지우고 다시. 애매하면 표에 `후보`/`한쪽만 채택`으로 남겨두고 넘어가도 됩니다.
 
+### Step 3. 못 쓸 데이터는 **⛔ 라벨**만 붙이기 (지우지 말 것)
+
+신호가 통째로 깨졌거나 동기화가 불가능해 **아무리 봐도 못 맞추는** 경우가 있습니다.
+그럴 땐 붙잡고 있지 말고 라벨만 붙이고 넘어가세요. 나중에 통계에서 자동으로 빠집니다.
+
+- **offset 화면**: `⛔ 세션 제외` — 그 세션 전체를 못 쓸 때
+- **edge 화면**: `⛔ 채널 제외` (그 채널만) · `⛔ 세션 제외` (전 채널)
+- 옆의 **사유**를 고르고(`노이즈` · `동기화불가` · `프로토콜이상` · `기록오류` · `기타`),
+  메모창이 뜨면 한 줄 남겨주세요 — 나중에 왜 뺐는지 판단하는 근거가 됩니다
+- 잘못 눌렀으면 같은 버튼이 `⛔ 제외 해제`로 바뀌어 있으니 다시 누르면 됩니다
+- 드롭다운에 `⛔ … [제외:노이즈]`로 표시되고, 필터 `분석제외 ⛔`로 모아볼 수 있습니다
+
+> **삭제가 아니라 라벨입니다.** 데이터와 주석은 그대로 남고 통계에서만 빠지므로,
+> 판단이 틀렸어도 언제든 되돌릴 수 있습니다. 애매하면 제외하지 말고 그냥 두세요
+> (`⚠️ 검토 필요`로 남아 있으면 교수님이 다시 봅니다).
+
 ## 4. 저장·인계
 
-- **Save를 누르면 서버의 공유 `result/`에 즉시 기록**됩니다 (`manual_offsets.json` / `manual_edges.json`). 따로 보낼 것 없습니다.
+- **Save를 누르면 서버의 공유 `result/`에 즉시 기록**됩니다
+  (`manual_offsets.json` · `manual_edges.json` · `exclusions.json`). 따로 보낼 것 없습니다.
 - 확정값을 git 이력으로 남기려면 (선택):
   ```bash
-  git add result/manual_offsets.json result/manual_edges.json result/exclusions.json
+  cd /workspace/research/EAGstatic
+  git add result/                       # 확정값 JSON 3개만 스테이징됨
   git commit -m "annotate: offset/edge 확정 (연구원)"
-  git pull --rebase && git push        # 커밋 전 pull 권장
+  git pull --rebase && git push         # push 전 pull 권장
   ```
-  (대용량 데이터·중간결과는 `.gitignore`로 자동 제외, 이 3개 JSON만 추적됩니다.)
+  `git add result/`로 폴더째 넣어도 **대용량 데이터·중간결과는 `.gitignore`로 자동 제외**되어
+  확정값 JSON 3개만 들어갑니다 (아직 안 만들어진 파일이 있어도 에러 나지 않습니다).
 
 ## 5. 진행 현황 확인
 
