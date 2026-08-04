@@ -9,20 +9,15 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import font_manager
 from matplotlib.ticker import MultipleLocator
 from pathlib import Path
 
 
 # ==================== 한글 폰트 설정 ====================
-def setup_korean_font():
-    font_candidates = ['Malgun Gothic', 'NanumGothic', 'AppleGothic']
-    for font_name in font_candidates:
-        font_path = font_manager.findfont(font_name, fallback_to_default=False)
-        if font_path and 'LastResort' not in font_path:
-            plt.rcParams['font.family'] = font_name
-            break
-    plt.rcParams['axes.unicode_minus'] = False
+# 자체 구현을 두지 않고 eag_analyzer의 것을 쓴다. 이름으로만 찾던 옛 구현은 폰트 파일이
+# addfont()로 등록되기 전에는 아무것도 못 찾아, 한글 폰트가 pip 번들로만 깔린 환경(Docker 등)
+# 에서 조용히 DejaVu로 폴백했다.
+from eag_analyzer import setup_korean_font  # noqa: E402
 
 
 def find_raw_data_start(filepath: str) -> int:

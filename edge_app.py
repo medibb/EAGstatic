@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np
 from sync_analyzer import find_session_pair, SyncAnalyzer
 import grf_triggered_annotator as G
+from eag_analyzer import get_data_dir
 import edge_store
 import exclusion_store
 
@@ -131,7 +132,8 @@ def load_worklist() -> list:
 
 
 def find_session_dir(subject: str, session: str) -> str:
-    for p in Path('data').rglob('BrainFlow-RAW_*.csv'):
+    # subject는 세션 폴더의 부모 이름 = 방문 폴더여야 하므로 평면 미러를 스캔한다.
+    for p in Path(get_data_dir()).rglob('BrainFlow-RAW_*.csv'):
         if p.parent.parent.name == subject and p.parent.name.endswith('-' + session):
             return str(p.parent)
     return ''

@@ -52,7 +52,49 @@ def _inputs(stem: str):
     return sorted(IN_DIR.glob(f'{stem}_*.csv'))
 
 
-def load_pooled(exclude_review: bool, all_channels: bool) -> pd.DataFrame:
+def attach_cohort(df: pd.DataFrame, axis: str) -> pd.DataFrame:
+    """manifest.csv를 붙여 사람(subject_id)·조건(condition)·코호트 적격을 채운다.
+
+    파라미터 CSV의 `subject` 컬럼은 사람이 아니라 **방문 폴더명**이다(data_flat이
+    방문을 최상위로 펼치기 때문). 한 사람이 1·2차 두 번 방문하므로 이걸 그대로
+    군집 단위로 쓰면 같은 사람의 두 방문이 서로 독립 개체로 취급되어 표준오차가
+    과소추정된다. manifest에서 사람 이름을 끌어와 `subject_id`로 두고, 방문은
+    `visit_id`로 남겨 중첩 랜덤효과 (1|subject/visit)를 쓸 수 있게 한다.
+
+    axis: 'none' 필터 없음 / 'a' s·f 모두 >=min_takes / 'b' s·f·c 모두 >=min_takes
+    """
+    df['visit_id'] = df['subject']
+    if 'condition' not in df.columns:
+        df['condition'] = df['session'].astype(str).str[0].str.lower()
+
+    man = Path('data_flat/manifest.csv')
+    if not man.exists():
+        print("  manifest.csv 없음 → subject_id=visit_id로 대체(build_flat_view.py 먼저 실행)")
+        df['subject_id'] = df['visit_id']
+        return df
+
+    m = pd.read_csv(man)
+    vis = (m[['visit', 'subject', 'subject_no', 'axis_a', 'axis_b']]
+           .drop_duplicates('visit')
+           .rename(columns={'visit': 'visit_id', 'subject': 'subject_id'}))
+    df = df.drop(columns=['subject_no'], errors='ignore').merge(vis, on='visit_id', how='left')
+
+    n_miss = int(df['subject_id'].isna().sum())
+    if n_miss:
+        print(f"  manifest에 없는 방문 {n_miss}행 → visit_id를 subject_id로 대체")
+        df['subject_id'] = df['subject_id'].fillna(df['visit_id'])
+
+    if axis in ('a', 'b'):
+        col = f'axis_{axis}'
+        n0, v0 = len(df), df['visit_id'].nunique()
+        df = df[df[col].fillna(False).astype(bool)].copy()
+        print(f"  코호트 axis_{axis} 적용: {n0 - len(df)}행 제외 "
+              f"(방문 {v0}→{df['visit_id'].nunique()}, 남은 {len(df)}행)")
+    return df
+
+
+def load_pooled(exclude_review: bool, all_channels: bool,
+                axis: str = 'none') -> pd.DataFrame:
     files = _inputs('grf_triggered_params')
     if not files:
         raise FileNotFoundError(f"{IN_DIR}/grf_triggered_params.csv 없음. "
@@ -88,6 +130,12 @@ def load_pooled(exclude_review: bool, all_channels: bool) -> pd.DataFrame:
     if qfiles and not all_channels:
         q = pd.concat([pd.read_csv(f) for f in qfiles], ignore_index=True)
         if {'channel_quality', 'subject', 'session', 'channel'} <= set(q.columns):
+            # 구버전 cross_params는 channel이 0-based라 1-based인 파라미터 CSV와
+            # 한 칸 어긋난다(ch8은 짝이 없어 소멸). 재추출 전 파일도 읽히도록 보정.
+            if q['channel'].min() == 0:
+                print("  cross_params가 0-based → 전극번호(1-based)로 보정")
+                q = q.copy()
+                q['channel'] = q['channel'] + 1
             q = q[['subject', 'session', 'channel', 'channel_quality',
                    'channel_snr_db']].drop_duplicates(['subject', 'session', 'channel'])
             df = df.merge(q, on=['subject', 'session', 'channel'], how='left')
@@ -104,6 +152,8 @@ def load_pooled(exclude_review: bool, all_channels: bool) -> pd.DataFrame:
                                  for s, ss in zip(df['subject'], df['session']) ]
     if exclude_review:
         df = df[~df['offset_review_flag']].copy()
+
+    df = attach_cohort(df, axis)
 
     # 파생
     df['abs_amp'] = df['amplitude'].abs()
@@ -186,11 +236,17 @@ def mixed_model(df: pd.DataFrame, out_path: Path):
         return
     d = df.copy()
     d['direction'] = (d['eag_direction'] == 'rise').astype(int)  # rise=1
+    # 군집은 사람(subject_id). 같은 사람의 방문은 그 안에 중첩시킨다 —
+    # 방문을 최상위 군집으로 두면 1·2차 방문이 독립 개체로 취급된다.
+    grp = 'subject_id' if 'subject_id' in d.columns else 'subject'
+    vc = {'visit': '0 + C(visit_id)'} if 'visit_id' in d.columns else None
     try:
         md = smf.mixedlm("abs_amp ~ abs_step * direction + C(channel)", d,
-                         groups=d['subject'], re_formula="~1")
+                         groups=d[grp], re_formula="~1", vc_formula=vc)
         res = md.fit(method='lbfgs', maxiter=200)
-        out_path.write_text(str(res.summary()), encoding='utf-8')
+        head = (f"군집: {grp} (n={d[grp].nunique()})"
+                + (f" / 중첩: visit_id (n={d['visit_id'].nunique()})\n\n" if vc else "\n\n"))
+        out_path.write_text(head + str(res.summary()), encoding='utf-8')
     except Exception as e:
         out_path.write_text(f"MixedLM 실패({e}) → 대체.\n" + _per_subject_slope_test(df),
                            encoding='utf-8')
@@ -198,7 +254,8 @@ def mixed_model(df: pd.DataFrame, out_path: Path):
 
 def _per_subject_slope_test(df: pd.DataFrame) -> str:
     slopes = []
-    for subj, s in df.groupby('subject'):
+    key = 'subject_id' if 'subject_id' in df.columns else 'subject'
+    for subj, s in df.groupby(key):
         if len(s) >= 5:
             slopes.append(sps.linregress(s['abs_step'], s['abs_amp']).slope)
     slopes = np.array(slopes)
@@ -258,13 +315,17 @@ def main():
     ap.add_argument('--all-channels', action='store_true', help='품질(PASS) 필터 끔')
     ap.add_argument('--exclude-review', action='store_true',
                     help='needs_review offset 세션 제외(민감도)')
+    ap.add_argument('--axis', choices=['none', 'a', 'b'], default='b',
+                    help="코호트 필터: a=s·f 충족, b=s·f·c 충족(기본), none=필터 없음")
     args = ap.parse_args()
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    df = load_pooled(args.exclude_review, args.all_channels)
-    print(f"관측(matched): {len(df)}  | 피험자 {df['subject'].nunique()}  "
-          f"세션 {df.groupby(['subject','session']).ngroups}  "
-          f"| review제외={args.exclude_review} PASS만={not args.all_channels}")
+    df = load_pooled(args.exclude_review, args.all_channels, args.axis)
+    print(f"관측(matched): {len(df)}  | 피험자 {df['subject_id'].nunique()}명 "
+          f"· 방문 {df['visit_id'].nunique()} · 테이크 "
+          f"{df.groupby(['visit_id','session']).ngroups}  "
+          f"| axis={args.axis} review제외={args.exclude_review} "
+          f"PASS만={not args.all_channels}")
 
     df.to_csv(OUT_DIR / 'grf_eag_pooled.csv', index=False)
     desc = descriptive(df); desc.to_csv(OUT_DIR / 'descriptive_by_bin.csv', index=False)

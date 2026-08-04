@@ -38,7 +38,8 @@ from sync_analyzer import (
     SyncAnalyzer, SessionPair, GRFEvent, EAGInflection,
     find_all_pairs, SAMPLE_RATE
 )
-from eag_analyzer import EEG_CHANNELS, CHANNEL_NAMES, CHANNEL_COLORS, FilterConfig, EAGAnalyzer
+from eag_analyzer import (EEG_CHANNELS, CHANNEL_NAMES, CHANNEL_COLORS, FilterConfig,
+                          EAGAnalyzer, get_data_dir)
 from frequency_analyzer import compute_noise_metrics, flag_noise
 from grf_triggered_annotator import compute_offset, extract_responses
 
@@ -968,6 +969,10 @@ def process_single_session(pair: SessionPair, output_dir: Path, do_phase2: bool 
             lambda ch: ch_quality[ch]['flag'])
         cross_df['channel_snr_db'] = cross_df['channel'].map(
             lambda ch: ch_quality[ch]['snr_db'])
+        # CrossParam.channel과 ch_quality는 0-based인데 grf_triggered_params는
+        # 1-based(전극 번호)로 쓴다. 두 CSV를 channel로 조인하면 한 칸씩 어긋나고
+        # ch8은 짝이 없어 통째로 사라지므로, 품질 매핑을 끝낸 뒤 전극 번호로 맞춘다.
+        cross_df['channel'] = cross_df['channel'] + 1
 
         # Phase 2
         phase2_dict = None
@@ -1000,7 +1005,7 @@ def process_single_session(pair: SessionPair, output_dir: Path, do_phase2: bool 
 def run_batch(subject_filter: Optional[str] = None, do_phase3: bool = False,
               reprocess_manual: bool = False):
     """전체 세션 batch 분석 → CSV 저장."""
-    pairs = find_all_pairs('data')
+    pairs = find_all_pairs(get_data_dir())
 
     if subject_filter:
         pairs = [p for p in pairs if subject_filter in p.subject_name]

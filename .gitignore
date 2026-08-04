@@ -33,6 +33,8 @@ Thumbs.db
 
 # Data files (large)
 data/
+# build_flat_view.py가 만드는 심볼릭 링크 미러 (파생물, 언제든 재생성 가능)
+data_flat/
 
 # Results (generated)
 # result/ 전체는 무시하되, 사람이 확정한 작은 JSON은 버전관리·공유(연구원 주석 인계)

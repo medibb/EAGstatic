@@ -125,7 +125,8 @@ def print_status():
     print(f"\n확정 override: manual_offsets {n_off} 세션 · manual_edges {n_edge} 키")
 
     print("\n다음 액션:")
-    print("  1) offset 검토: python3 offset_review.py --dir data")
+    print("  0) 평면 미러 갱신: python3 build_flat_view.py")
+    print("  1) offset 검토: python3 offset_review.py --dir data_flat")
     print("  2) edge 검토  : python3 edge_app.py --host 0.0.0.0 --port 8765")
     print("  3) 검토 후    : python3 run_pipeline.py analyze")
     print("=" * 60)
@@ -150,7 +151,8 @@ def main():
                     choices=['status', 'diag', 'params', 'stats',
                              'analyze', 'all'],
                     help="실행할 단계 (기본: analyze = params+stats)")
-    ap.add_argument('--dir', default='data', help='데이터 디렉토리 (diag)')
+    ap.add_argument('--dir', default='data_flat',
+                    help='데이터 디렉토리 (diag). 기본은 평면 미러(data_flat)')
     ap.add_argument('--channels', default='1', help='EAG 채널 (diag)')
     ap.add_argument('--phase3', action='store_true',
                     help='파라미터 추출 시 Phase3(주파수)까지 (params)')

@@ -49,12 +49,17 @@ def setup_korean_font():
         # Windows
         "C:/Windows/Fonts/malgun.ttf",
     ]
-    # pip 번들 폰트(koreanize_matplotlib, NanumGothic) — root/apt 없이 설치 가능, Docker에 편리
+    # pip 번들 폰트(koreanize_matplotlib, NanumGothic) — root/apt 없이 설치 가능, Docker에 편리.
+    # import가 아니라 find_spec으로 '위치만' 찾는다. 이 패키지는 import 시 distutils를 건드려
+    # Python 3.12+에서 ModuleNotFoundError로 죽는데(3.12에서 distutils 표준 제거),
+    # 우리에게 필요한 건 함께 설치된 ttf 파일뿐이라 모듈을 실행할 이유가 없다.
     try:
-        import koreanize_matplotlib as _km
-        _bundle = os.path.join(os.path.dirname(_km.__file__), 'fonts', 'NanumGothic.ttf')
-        if os.path.exists(_bundle):
-            candidate_files.insert(0, _bundle)
+        import importlib.util
+        _spec = importlib.util.find_spec('koreanize_matplotlib')
+        if _spec is not None and _spec.origin:
+            _bundle = os.path.join(os.path.dirname(_spec.origin), 'fonts', 'NanumGothic.ttf')
+            if os.path.exists(_bundle):
+                candidate_files.insert(0, _bundle)
     except Exception:
         pass
     plt.rcParams['axes.unicode_minus'] = False
@@ -544,9 +549,15 @@ def find_csv_files(base_dir: str) -> List[str]:
 
 
 def get_data_dir() -> str:
-    """data 폴더 경로 반환"""
+    """분석용 데이터 폴더(data_flat) 경로 반환.
+
+    원본 data/는 <피험자>/<방문>/<조건>/<세션> 4단계 중첩이라, find_session_pair()가
+    세션의 부모 폴더를 subject_name으로 쓰면 조건 폴더('1. Side')가 잡혀 44명이
+    3개로 뭉개진다. offset_report·manual_offsets·exclusions의 키는 모두 방문 폴더명
+    기준이므로, 분석은 build_flat_view.py가 만든 평면 미러를 본다.
+    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(script_dir, 'data')
+    return os.path.join(script_dir, 'data_flat')
 
 
 def get_result_dir() -> str:

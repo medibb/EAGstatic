@@ -47,6 +47,7 @@ import numpy as np
 
 from sync_analyzer import find_session_pair, SyncAnalyzer
 import grf_triggered_annotator as G
+from eag_analyzer import get_data_dir
 from offset_manager import (set_manual_offset, clear_manual_offset,
                             list_all_offsets, get_manual_offset)
 import exclusion_store
@@ -127,9 +128,13 @@ def build_data(session_dir: str, channel: int = 1) -> dict:
 # ==================== 세션 탐색 ====================
 
 def scan_sessions() -> list:
-    """data/ 아래 모든 세션 (subject, session, dir) — 가벼운 파일명 스캔."""
+    """평면 미러 아래 모든 세션 (subject, session, dir) — 가벼운 파일명 스캔.
+
+    subject를 세션 폴더의 부모 이름으로 잡으므로 반드시 평면 미러를 봐야 한다.
+    원본 data/는 부모가 조건 폴더('1. Side')라 manual_offsets 키와 어긋난다.
+    """
     out = []
-    for p in sorted(Path('data').rglob('BrainFlow-RAW_*.csv')):
+    for p in sorted(Path(get_data_dir()).rglob('BrainFlow-RAW_*.csv')):
         d = p.parent
         name = d.name
         sess = name.rsplit('-', 1)[-1] if '-' in name else name
