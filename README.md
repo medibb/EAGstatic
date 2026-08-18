@@ -91,7 +91,102 @@ EAGstatic/
 - **edge 검출 기본값**: `edge_annotator` min_amp 25, slope_k 3.0, drift ON. 동일 검출기를 GRF signed imbalance에도 적용해 전이를 검출.
 
 > ⚠️ manual review로 offset/edge를 확정한 뒤에는 4단계(`parameter_extractor --batch`)를 **다시 실행**해야 확정값과 `load_pct`·`accepted` 등 최신 컬럼이 반영됩니다.
-> 실험 프로토콜(한발서기 4회 × 부하 시작/이탈 = 8 이벤트)과 검토 절차는 `REVIEW_WORKFLOW.md`, 상세 통계 설계는 `STATS_PLAN.md` 참조.
+> 실험 프로토콜(한발서기 4회 × 부하 시작/이탈 = 8 이벤트)과 판정 기준은 `ANNOTATION_PROTOCOL.md`, 상세 통계 설계는 `STATS_PLAN.md` 참조.
+
+## 문서 안내
+
+| 문서 | 역할 | 대상 |
+|---|---|---|
+| **`ANNOTATION_PROTOCOL.md`** | **판정 기준의 정본.** 조작적 정의, 허용 오차, 애매 상황 규칙, rater 자격, 신뢰도 설계 | Methods 작성·검증 |
+| `ANNOTATION_GUIDE.md` | 접속·조작·저장 실무 안내 | 연구원 |
+| **이 문서** | 코드 구조, 파이프라인, CLI | 개발·재현 |
+| `STATS_PLAN.md` | 통계 설계 (dose-response) | 분석 |
+
+> 판정 기준은 `ANNOTATION_PROTOCOL.md` **한 곳에만** 존재합니다. 다른 문서는 링크만 하고
+> 기준을 다시 쓰지 않습니다. 기준을 고칠 때는 그 문서만 고치면 됩니다.
+>
+> 구 `ONBOARDING.md`·`REVIEW_WORKFLOW.md`는 위 세 문서로 재배치되어 폐지되었습니다
+> (git 이력에 보존).
+
+## annotation CLI 레퍼런스
+
+GUI(`ANNOTATION_GUIDE.md`)로 하는 작업의 CLI 등가물입니다. 판정 기준은
+`ANNOTATION_PROTOCOL.md`를 따릅니다.
+
+**검토 대상 추리기**
+
+```bash
+cat result/offset_review/worklist.csv     # offset 검토 대상 (세션 단위)
+python3 offset_review.py --dir data       # offset worklist + 패널 PNG 생성
+python3 edge_review.py  --dir data        # edge worklist 생성 (offset 확정 후 재실행, 약 7분)
+python3 edge_review.py  --list            # edge 검토 대상 요약
+```
+
+offset worklist의 `reason`: `저match`(정렬 약함) · `edge매칭부족`(GRF 전이 대비 EAG edge
+매칭 적음) · `큰교정보류(재검토)` · `대안제시(res=…)`
+
+edge worklist의 `priority`: `high`(측정 불가 cycle·cycle 수 이상, 사람이 봐야 함) ·
+`low`(한쪽만 자동 채택, 값은 확보됨) · 빈칸(정상)
+
+주요 컬럼: `priority · labels · ok · n_cycles · n_measured_cycles · n_matched · n_edges ·
+n_single_sided · n_noise · load_pct · amp · asym · offset_source · offset_pending`
+
+> `offset_pending=True` 행은 offset 미확정 세션입니다. **그 세션의 edge를 손으로 고치면
+> 헛수고입니다** (edge는 `te_corr` 프레임에 저장되므로 offset이 바뀌면 어긋남).
+
+**offset 확정**
+
+```bash
+python3 offset_app.py --host 0.0.0.0 --port 8766                    # GUI (권장)
+python3 offset_review.py --set --subject "(02.02_17)김종문_1" --session-name s2 --offset -0.15
+python3 offset_review.py --list
+python3 offset_review.py --clear --subject "(02.02_17)김종문_1" --session-name s2
+python3 offset_review.py --session "data/(02.02_17)김종문_1/OpenBCISession_...-s2"  # 패널 재생성
+```
+
+**edge 확정**
+
+```bash
+python3 edge_app.py --host 0.0.0.0 --port 8765                      # GUI (권장)
+python3 edge_editor.py review --session "<경로>" --channel 1         # 번호라벨 PNG + edge 테이블
+python3 edge_editor.py add    --session "<경로>" --channel 1 --onset 30.1 --offset 30.6 --snap
+python3 edge_editor.py move   --session "<경로>" --channel 1 --id 2 --onset 19.2 --offset 19.7 --snap
+python3 edge_editor.py delete --session "<경로>" --channel 1 --id 3
+python3 edge_editor.py reset  --session "<경로>" --channel 1         # 자동검출로 복귀
+python3 edge_editor.py list
+```
+
+매 명령이 `result/edge_edit/{피험자}_{세션}_ch{N}_edit.png`를 갱신합니다.
+한글 폴더명은 **따옴표**로 감싸세요.
+
+**제외 라벨**
+
+```bash
+python3 exclusion_store.py --list
+python3 exclusion_store.py --set --subject "(02.02_10)주창민_1" --session s1 \
+        --channel 3 --reason 노이즈 --note "드리프트 심함"        # channel 0 = 세션 전체
+python3 exclusion_store.py --clear --subject "..." --session s1 --channel 3
+```
+
+파이프라인 반영: `parameter_extractor` → `excluded` · `exclude_reason` 컬럼 /
+`stats_grf_eag` → `excluded=True` 행 자동 제외 (`accepted=False`도 함께) /
+`edge_review` → 제외 채널은 worklist에 올리지 않음
+
+**작업 루프**
+
+```
+[1회] offset_review.py --dir data     # offset worklist 생성
+[1회] edge_review.py  --dir data      # edge worklist 생성
+
+세션 하나 선택
+  → offset 패널 확인 → (필요시) offset_app에서 대응점 클릭 → Save
+  → edge_app에서 그 세션 Load → 노이즈 삭제 → 누락 anchor에 knee 추가 → Save
+다음 세션 반복 (priority=high 부터)
+  → 완료 후 edge_review --dir data 재실행 → parameter_extractor --batch → stats_grf_eag
+```
+
+**진행 현황은 문서에 적지 않고 `python3 run_pipeline.py status`로 확인합니다**
+(손으로 유지하는 스냅샷은 반드시 낡습니다).
 
 ### 빠른 실행 (run_pipeline.py)
 
