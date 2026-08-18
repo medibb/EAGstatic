@@ -9,22 +9,25 @@ import json
 from datetime import datetime
 from typing import Optional
 
-DEFAULT_PATH = os.path.join(os.path.dirname(__file__), 'result', 'manual_offsets.json')
+from store_io import store_path, load_json, save_json_atomic
+
+STORE_FILENAME = 'manual_offsets.json'
+
+
+def default_path() -> str:
+    """저장 위치. `EAG_RESULT_DIR`로 바꿀 수 있다 (store_io 참조)."""
+    return store_path(STORE_FILENAME)
+
+
+DEFAULT_PATH = default_path()  # 하위호환 (import 시점 해석)
 
 
 def load_manual_offsets(path: str = None) -> dict:
-    path = path or DEFAULT_PATH
-    if not os.path.exists(path):
-        return {}
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    return load_json(path or default_path())
 
 
 def save_manual_offsets(offsets: dict, path: str = None):
-    path = path or DEFAULT_PATH
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(offsets, f, ensure_ascii=False, indent=2)
+    save_json_atomic(path or default_path(), offsets)
 
 
 def get_manual_offset(subject: str, session: str, path: str = None) -> Optional[float]:

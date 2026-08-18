@@ -36,6 +36,10 @@ import grf_triggered_annotator as G
 from eag_analyzer import get_data_dir
 import edge_store
 import exclusion_store
+import store_io
+
+# 신뢰도 파일럿용 백지 모드 (main()에서 --blank로 설정)
+BLANK = False
 
 
 @contextlib.contextmanager
@@ -75,6 +79,13 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
     if man is not None:
         edges = man
         source = 'manual'
+    elif BLANK:
+        # 신뢰도 파일럿: EAG edge 자동검출만 숨긴다. GRF에서 나온 anchor 8개는 그대로
+        # 보여준다 (그건 객관적 기준이고, 사람이 재는 것은 knee 위치다).
+        # 자동값을 초기값으로 주면 두 rater가 나란히 그것을 수용해 일치도가 부풀려진다
+        # (ANNOTATION_PROTOCOL.md §5.3).
+        edges = []
+        source = 'blank'
     else:
         auto = G.detect_eag_edges_protocol(te, eag, anchors, fs=sa.eag.sample_rate)
         edges = [{'onset_time': e[0], 'onset_amp': e[1],
@@ -283,6 +294,9 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 </style></head><body>
 <div id="bar">
  <select id="wl" title="세션 목록" style="max-width:440px"></select>
+ <select id="subjfilter" title="대상자 필터 (목록을 연 뒤 이름을 타이핑하면 바로 이동)">
+  <option value="all" selected>대상자 전체</option>
+ </select>
  <select id="filter" title="목록 필터">
   <option value="all" selected>전체</option>
   <option value="review">검토대상 ▲</option>
@@ -519,14 +533,39 @@ function renderTbl(){const noise=new Set(D.noise_idx||[]);
 // 세션 드롭다운 — worklist(needs_review)만이 아니라 data/ 아래 전체 세션.
 // edge가 확정된 세션은 ✅와 채널 목록, offset 확정 세션은 off✅ 로 표시.
 let SESSIONS=[];
+// 목록의 subject는 사람이 아니라 방문 폴더명 '(MM.DD_HH)이름_차수'다. 한 사람이 여러 번
+// 방문하므로(1, 1.5, 2, 2.5X …) 그대로는 같은 대상자가 여러 항목으로 흩어진다. 이름만 뽑아
+// 묶는다. 형식에서 벗어난 이름이 들어오면 방문명을 그대로 써서, 유도 실패로 세션이 목록에서
+// 조용히 사라지는 일이 없게 한다.
+const PERSON_RE=/^\([^)]*\)\s*(.+?)_[0-9]+(?:\.[0-9]+)?[A-Za-z]*$/;
+function personOf(subject){const m=PERSON_RE.exec(subject);return m?m[1]:subject;}
+
+function renderSubjects(){
+ const sel=document.getElementById('subjfilter'), cur=sel.value||'all';
+ const agg=new Map();
+ SESSIONS.forEach(x=>{const p=personOf(x.subject);
+  const a=agg.get(p)||{n:0,bad:0,visits:new Set()};
+  a.n++; if(x.proto_total&&x.proto_ok<x.proto_total)a.bad++; a.visits.add(x.subject); agg.set(p,a);});
+ const names=[...agg.keys()].sort((a,b)=>a.localeCompare(b,'ko'));
+ sel.innerHTML='<option value="all">대상자 전체 ('+names.length+'명)</option>';
+ // 부가정보는 이 앱의 주 작업량인 '프로토콜 미충족'으로 — 여기서 knee를 8개로 맞춘다.
+ names.forEach(p=>{const a=agg.get(p), o=document.createElement('option');
+  o.value=p;
+  o.textContent=p+'  ('+a.visits.size+'방문 · 세션 '+a.n+(a.bad?' · 미충족 '+a.bad:'')+')';
+  sel.appendChild(o);});
+ sel.value=[...agg.keys()].includes(cur)?cur:'all';   // 목록 갱신 후에도 선택 유지
+}
+
 function renderList(){
  const sel=document.getElementById('wl'), f=document.getElementById('filter').value;
+ const sf=document.getElementById('subjfilter').value;
  const cur=document.getElementById('sess').value;
  const done=x=>x.edge_channels.length>0;
  const proto=x=>x.proto_total&&x.proto_ok<x.proto_total;
  const isExc=x=>x.excl_session||(x.excl_channels&&x.excl_channels.length);
- const keep=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?done(x)
+ const keepStatus=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?done(x)
               : f==='proto'?proto(x) : f==='excluded'?isExc(x) : !done(x);
+ const keep=x=> keepStatus(x) && (sf==='all' || personOf(x.subject)===sf);
  const rows=SESSIONS.filter(keep), nDone=SESSIONS.filter(done).length;
  sel.innerHTML=`<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · edge확정 ${nDone}) —</option>`;
  rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
@@ -541,8 +580,10 @@ function renderList(){
   sel.appendChild(o);});
  sel.value=cur;
 }
-function refreshList(){return fetch(api('api/sessions')).then(r=>r.json()).then(rows=>{SESSIONS=rows;renderList();});}
+function refreshList(){return fetch(api('api/sessions')).then(r=>r.json())
+ .then(rows=>{SESSIONS=rows;renderSubjects();renderList();});}
 document.getElementById('filter').onchange=renderList;
+document.getElementById('subjfilter').onchange=renderList;
 document.getElementById('wl').onchange=()=>{const v=document.getElementById('wl').value;
  if(v){document.getElementById('sess').value=v;load();}};
 refreshList();
@@ -553,11 +594,18 @@ def main():
     ap = argparse.ArgumentParser(description='EAG edge annotation GUI (local)')
     ap.add_argument('--port', type=int, default=8765, help='포트 (기본 8765, 3002 금지)')
     ap.add_argument('--host', default='127.0.0.1')
+    ap.add_argument('--blank', action='store_true',
+                    help='신뢰도 파일럿용. EAG edge 자동검출을 숨기고 빈 상태에서 시작한다 '
+                         '(ANNOTATION_PROTOCOL.md §5.3). 저장 위치는 EAG_RESULT_DIR로 분리할 것')
     args = ap.parse_args()
     if args.port == 3002:
         raise SystemExit('port 3002는 api-server 전용이라 사용 금지')
+    global BLANK
+    BLANK = args.blank
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"Edge Annotator: http://{args.host}:{args.port}  (Ctrl-C 종료)")
+    if BLANK:
+        print(f"  [BLANK MODE] 자동 edge 숨김 · 저장 위치: {store_io.result_dir()}")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

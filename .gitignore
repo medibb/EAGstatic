@@ -42,6 +42,11 @@ result/*
 !result/manual_offsets.json
 !result/manual_edges.json
 !result/exclusions.json
+# 신뢰도 파일럿: 동결한 대상 목록만 추적 (rater 작업물·리포트는 제외).
+# result/* 로 디렉터리 자체가 제외되므로 디렉터리를 먼저 되살려야 한다.
+!result/reliability/
+result/reliability/*
+!result/reliability/pilot_sessions.csv
 results/
 
 # Synology NAS artifacts

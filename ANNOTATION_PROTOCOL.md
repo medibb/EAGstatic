@@ -152,13 +152,33 @@ heel off 72 ms, flat foot 80 ms. 급격한 이벤트는 좁고, 완만한 이벤
 Vasseljen et al. (2006)의 육안 EMG onset 판정도 smallest detectable difference가
 21~24 ms 수준이었다.
 
-**절차.**
+**절차.** `reliability_pilot.py`가 세 단계를 담당한다.
 
-1. 훈련을 마친 rater 2명이 **10세션**을 독립적으로 주석 (§8.3의 독립 관찰 조건 적용)
-2. onset과 offset **각각** Bland-Altman LoA를 산출
-3. LoA를 반올림한 값을 해당 이벤트 종류의 tolerance로 확정하고 이 문서에 기록
-4. 확정된 tolerance는 이후 (a) rater 자격 판정(§6), (b) 신뢰도 매칭(§8),
-   (c) auto vs manual 비교(§8)에 **동일하게** 쓴다
+```bash
+# 1. 대상 세션을 층화 추출해 동결 (worklist 5 + 비worklist 5). 시작 전 커밋할 것
+python3 reliability_pilot.py sessions --n 10
+
+# 2. 자동 검출 스냅샷 (나중에 "사람이 실제로 손댄 이벤트"를 가려내는 기준)
+python3 reliability_pilot.py baseline
+
+# 3. rater가 각자 격리된 저장소에 백지로 작업 (§8.3)
+EAG_RESULT_DIR=result/reliability/rater_A python3 offset_app.py --host 0.0.0.0 --port 8768 --blank
+EAG_RESULT_DIR=result/reliability/rater_B python3 edge_app.py   --host 0.0.0.0 --port 8769 --blank
+
+# 4. LoA 산출 + tolerance 후보 제시
+python3 reliability_pilot.py report --a rater_A --b rater_B
+```
+
+리포트는 tolerance를 0.02~0.80 s로 스윕하며 매칭 수와 F1을 보여준다.
+**F1이 평평해지기 시작하는 지점이 실질 상한**이다. 그보다 키우면 서로 다른 이벤트를
+억지로 묶기 시작한다. 그 지점에서 onset·offset·진폭의 LoA를 각각 산출한다.
+
+산출된 LoA 반폭을 반올림해 아래 표에 적고, 확정일과 리포트 경로를 함께 기록한 뒤
+커밋한다. 확정된 tolerance는 이후 (a) rater 자격 판정(§6), (b) 신뢰도 매칭(§8),
+(c) auto vs manual 비교에 **동일하게** 쓴다.
+
+**표본을 사후에 고르지 않는다.** `sessions`가 만든 `pilot_sessions.csv`를 작업 시작 전에
+커밋해 동결한다. 결과를 보고 세션을 바꾸면 표본 선택 편의가 된다.
 
 | 항목 | 값 |
 |---|---|
@@ -300,14 +320,35 @@ GUI는 자동 검출 결과를 초기값으로 그리고, 이미 확정된 세�
 **두 rater가 같은 초기값에서 시작하면 둘 다 손을 안 댄 경우가 완전 일치로 잡혀,
 재는 것이 사람의 일치도가 아니라 알고리즘의 결정론성이 된다.**
 
-**코드 변경 없이 확보하는 방법** (둘 중 하나):
+**구현 (2026-08-18).** 두 장치로 확보한다.
 
-- (a) 신뢰도용 세션을 **미리 지정**해 본 작업에서 건너뛰게 하고, 마지막에 두 사람이
-  각각 백지 상태에서 수행
-- (b) `result/manual_offsets.json` · `manual_edges.json`을 다른 이름으로 옮겨둔 상태에서
-  두 번째 rater가 수행한 뒤, 두 결과를 대조
+**(1) 저장 위치 격리** — 환경변수 `EAG_RESULT_DIR`가 세 저장소의 루트를 바꾼다
+(`store_io.py`). rater별·라운드별 디렉터리를 쓰면 서로의 값을 보지 못하고, 본 분석
+파이프라인도 파일럿 값을 보지 못한다. `sync_analyzer`도 같은 모듈을 통해 offset을
+조회하므로 자동으로 따라온다.
 
-어느 쪽이든 **본 작업 시작 전에 대상 세션 목록을 확정**해야 한다.
+```
+result/reliability/
+├── pilot_sessions.csv       # 대상 목록 (동결, git 추적)
+├── auto_baseline.json       # 자동 검출 스냅샷
+├── rater_A/{manual_offsets,manual_edges,exclusions}.json
+├── rater_B/…
+├── round2_rater_A/…         # intra-rater 재검토 (2주 후)
+└── report/                  # LoA 표, tolerance 스윕
+```
+
+rater ID와 라운드를 **파일 필드가 아니라 디렉터리로** 표현하므로 저장소 스키마를
+바꿀 필요가 없다. 두 사람이 동시에 작업하려면 포트를 나눈다 (8768/8769 등, **3002 금지**).
+
+**(2) 백지 모드** — 두 앱의 `--blank` 플래그.
+
+| 앱 | `--blank`가 숨기는 것 | 남기는 것 |
+|---|---|---|
+| `offset_app.py` | 자동 보정(residual), best-match 후보, match 프로파일 | 원시 트레이스 |
+| `edge_app.py` | EAG edge 자동검출 | **GRF anchor 8개** |
+
+edge 쪽에서 anchor를 남기는 것이 중요하다. anchor는 GRF에서 나온 객관적 기준이고,
+사람이 재는 것은 그 자리의 knee 위치다. anchor까지 숨기면 다른 과제를 재게 된다.
 
 ### 8.4 자동 수용 채널 층화
 
@@ -362,12 +403,14 @@ rater가 얼마나 손댈 의향이 있었는지를 재게 된다. 이 순환을
 
 세 파일만 채워지면 재추출 시 전부 자동 반영된다.
 
-### 9.2 필수 개선 (작업 시작 전)
+세 저장소 모두 `store_io.save_json_atomic()`을 통해 **원자적으로** 기록한다
+(임시 파일 → `os.replace`, 교체 전 `.bak` 1세대 보존). 기존 방식(`open(path,'w')` 직후
+`json.dump`)은 쓰는 도중 끊기거나 두 명이 동시에 저장하면 파일이 통째로 유실됐다.
+확정값 수백 건이 한 번에 날아갈 수 있어 신뢰도 연구와 무관하게 필요한 조치였다.
 
-- **atomic write**: 현재 세 저장소 모두 `open(path,'w')` 직후 `json.dump`다. 쓰는 도중
-  끊기거나 두 명이 동시에 저장하면 **파일이 통째로 유실된다.** 임시 파일에 쓰고
-  `os.replace()`로 교체하고 백업을 회전한다. 신뢰도와 무관하게 데이터 보호를 위해 필요하다
-- **작업 분할**: atomic write 적용 전까지는 세션을 나눠 맡아 동시 저장을 피한다
+원자적 교체는 손상을 막을 뿐 **동시 저장의 경합 자체를 막지는 않는다.** 두 사람이 같은
+세션을 저장하면 여전히 마지막 저장이 이긴다. 본 캠페인에서는 세션을 나눠 맡고,
+신뢰도 하위연구에서는 `EAG_RESULT_DIR`로 저장소를 분리한다.
 
 ### 9.3 변경 이력
 
@@ -427,3 +470,4 @@ Ch.4 4.2.7에 들어갈 문장 구조다. 대괄호는 확정 후 채운다.
 | 날짜 | 내용 |
 |---|---|
 | 2026-08-18 | 최초 작성. `REVIEW_WORKFLOW.md`의 프로토콜·판정 규칙을 흡수하고, 조작적 정의·tolerance·rater 자격·신뢰도 설계를 신설 |
+| 2026-08-18 | 구현 반영: `store_io.py`(EAG_RESULT_DIR 격리 + atomic write), 두 앱의 `--blank`, `reliability_pilot.py`(sessions/baseline/report). §5.3 절차와 §8.3을 실행 가능한 명령으로 교체 |

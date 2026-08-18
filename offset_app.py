@@ -1,7 +1,8 @@
 """
 Offset Alignment App — 브라우저 GUI로 GRF/EAG 위의 점을 직접 찍어 offset을 확정.
 
-REVIEW_WORKFLOW Step 1(②③)의 "안 겹치면 offset 값을 판단 → --set" 과정을 대체한다.
+ANNOTATION_GUIDE.md Step 1의 "안 겹치면 offset 값을 판단 → --set" 과정을 대체한다.
+판정 기준은 ANNOTATION_PROTOCOL.md §5.1.
 눈금을 읽어 값을 계산할 필요 없이, **GRF 트레이스의 변곡점 1개 + EAG 트레이스의
 대응 변곡점 1개를 클릭**하면 두 점이 겹치는 offset이 자동 계산되어 즉시 미리보기로
 반영된다. 여러 쌍을 찍으면 중앙값(median)을 쓰므로 한 쌍이 부정확해도 강건하다.
@@ -50,6 +51,10 @@ import grf_triggered_annotator as G
 from eag_analyzer import get_data_dir
 from offset_manager import (set_manual_offset, clear_manual_offset,
                             list_all_offsets, get_manual_offset)
+import store_io
+
+# 신뢰도 파일럿용 백지 모드 (main()에서 --blank로 설정)
+BLANK = False
 import exclusion_store
 
 MAX_POINTS = 20000    # 표시 다운샘플 목표 점 수 (클릭 정밀도 확보용으로 넉넉히)
@@ -87,14 +92,24 @@ def build_data(session_dir: str, channel: int = 1) -> dict:
         sa = SyncAnalyzer(pair)
         off, trans, signed, grf_t = G.compute_offset(sa, channel - 1, recompute)
 
-    te = sa.unified_time_eag - off.residual          # 보정된 EAG 시간축 (표시 프레임)
+    # blank 모드: 알고리즘의 보정(residual)과 후보 제시를 숨긴다. 두 rater가 같은
+    # 자동값을 초기값으로 받으면 "둘 다 손대지 않음"이 완전 일치로 잡혀, 재는 것이
+    # 사람의 일치도가 아니라 알고리즘의 결정론성이 된다 (ANNOTATION_PROTOCOL.md §5.3).
+    residual = 0.0 if BLANK else off.residual
+    corrected = off.auto_offset if BLANK else off.corrected_offset
+
+    te = sa.unified_time_eag - residual             # 보정된 EAG 시간축 (표시 프레임)
     eag = detrend(sa.eag_filtered[:, channel - 1])
     tg = sa.unified_time_grf
 
     edges = G.detect_eag_edges(te, eag, fs=sa.eag.sample_rate)
     eag_edge_c = np.array([e[0] for e in edges]) if edges else np.array([])
-    # 프로파일은 미보정 프레임의 edge 열 기준 (compute_offset과 동일한 residual 좌표계)
-    cand, prof, best_res, margin = G.offset_match_profile(grf_t, eag_edge_c + off.residual)
+    if BLANK:
+        cand, prof = np.array([]), np.array([])
+        best_res = margin = np.nan
+    else:
+        # 프로파일은 미보정 프레임의 edge 열 기준 (compute_offset과 동일한 residual 좌표계)
+        cand, prof, best_res, margin = G.offset_match_profile(grf_t, eag_edge_c + residual)
 
     r1 = lambda a: [round(float(x), 1) for x in a]
     r3 = lambda a: [round(float(x), 3) for x in a]
@@ -106,12 +121,14 @@ def build_data(session_dir: str, channel: int = 1) -> dict:
         'subject': pair.subject_name, 'session': pair.session_name, 'channel': channel,
         'n_channels': int(sa.eag_filtered.shape[1]),
         'auto_offset': round(float(off.auto_offset), 3),
-        'residual': round(float(off.residual), 3),
-        'corrected_offset': round(float(off.corrected_offset), 3),
-        'method': off.method,
+        'residual': round(float(residual), 3),
+        'corrected_offset': round(float(corrected), 3),
+        'method': 'blank' if BLANK else off.method,
         'match_auto': round(float(off.match_rate_auto), 3),
         'match_corrected': round(float(off.match_rate_corrected), 3),
-        'needs_review': bool(off.needs_review), 'reason': off.review_reason,
+        'needs_review': False if BLANK else bool(off.needs_review),
+        'reason': '' if BLANK else off.review_reason,
+        'blank': bool(BLANK),
         'has_manual': manual is not None,
         'manual_offset': None if manual is None else round(float(manual), 3),
         'recomputed': bool(recompute),
@@ -276,6 +293,9 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 
 <div id="bar">
  <select id="sesslist" style="max-width:480px"></select>
+ <select id="subjfilter" title="대상자 필터 (목록을 연 뒤 이름을 타이핑하면 바로 이동)">
+  <option value="all" selected>대상자 전체</option>
+ </select>
  <select id="filter" title="목록 필터">
   <option value="all" selected>전체</option>
   <option value="review">검토대상 ▲</option>
@@ -601,11 +621,35 @@ document.getElementById('clearman').onclick=async()=>{
 };
 
 let SESSIONS=[];
+// 목록의 subject는 사람이 아니라 방문 폴더명 '(MM.DD_HH)이름_차수'다. 한 사람이 여러 번
+// 방문하므로(1, 1.5, 2, 2.5X …) 그대로는 같은 대상자가 여러 항목으로 흩어진다. 이름만 뽑아
+// 묶는다. 형식에서 벗어난 이름이 들어오면 방문명을 그대로 써서, 유도 실패로 세션이 목록에서
+// 조용히 사라지는 일이 없게 한다.
+const PERSON_RE=/^\([^)]*\)\s*(.+?)_[0-9]+(?:\.[0-9]+)?[A-Za-z]*$/;
+function personOf(subject){const m=PERSON_RE.exec(subject);return m?m[1]:subject;}
+
+function renderSubjects(){
+ const sel=document.getElementById('subjfilter'), cur=sel.value||'all';
+ const agg=new Map();
+ SESSIONS.forEach(x=>{const p=personOf(x.subject);
+  const a=agg.get(p)||{n:0,rev:0,visits:new Set()};
+  a.n++; if(x.in_worklist)a.rev++; a.visits.add(x.subject); agg.set(p,a);});
+ const names=[...agg.keys()].sort((a,b)=>a.localeCompare(b,'ko'));
+ sel.innerHTML='<option value="all">대상자 전체 ('+names.length+'명)</option>';
+ names.forEach(p=>{const a=agg.get(p), o=document.createElement('option');
+  o.value=p;
+  o.textContent=p+'  ('+a.visits.size+'방문 · 세션 '+a.n+(a.rev?' · 검토 '+a.rev:'')+')';
+  sel.appendChild(o);});
+ sel.value=[...agg.keys()].includes(cur)?cur:'all';   // 목록 갱신 후에도 선택 유지
+}
+
 function renderList(){
  const sel=document.getElementById('sesslist'), f=document.getElementById('filter').value;
+ const sf=document.getElementById('subjfilter').value;
  const cur=document.getElementById('sess').value;
- const keep=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?x.manual!=null
+ const keepStatus=x=> f==='all'?true : f==='review'?x.in_worklist : f==='done'?x.manual!=null
               : f==='excluded'?x.excluded!=null : x.manual==null;
+ const keep=x=> keepStatus(x) && (sf==='all' || personOf(x.subject)===sf);
  const rows=SESSIONS.filter(keep), nDone=SESSIONS.filter(x=>x.manual!=null).length;
  sel.innerHTML=`<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · 확정 ${nDone}) —</option>`;
  rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
@@ -617,9 +661,11 @@ function renderList(){
  sel.value=cur;                      // 현재 세션이 필터에서 빠지면 빈 값이 되지만 #sess는 유지됨
 }
 function refreshList(){
- return fetch(api('api/sessions')).then(r=>r.json()).then(rows=>{SESSIONS=rows;renderList();});
+ return fetch(api('api/sessions')).then(r=>r.json())
+   .then(rows=>{SESSIONS=rows;renderSubjects();renderList();});
 }
 document.getElementById('filter').onchange=renderList;
+document.getElementById('subjfilter').onchange=renderList;
 document.getElementById('sesslist').onchange=()=>{
  const v=document.getElementById('sesslist').value;
  if(v){document.getElementById('sess').value=v;load();}
@@ -632,11 +678,18 @@ def main():
     ap = argparse.ArgumentParser(description='EAG-GRF offset 정렬 GUI (점 찍어 맞추기)')
     ap.add_argument('--port', type=int, default=8766, help='포트 (기본 8766, 3002 금지)')
     ap.add_argument('--host', default='127.0.0.1')
+    ap.add_argument('--blank', action='store_true',
+                    help='신뢰도 파일럿용. 자동 보정(residual)과 best-match 후보를 숨긴다 '
+                         '(ANNOTATION_PROTOCOL.md §5.3). 저장 위치는 EAG_RESULT_DIR로 분리할 것')
     args = ap.parse_args()
     if args.port == 3002:
         raise SystemExit('port 3002는 api-server 전용이라 사용 금지')
+    global BLANK
+    BLANK = args.blank
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"Offset Aligner: http://{args.host}:{args.port}  (Ctrl-C 종료)")
+    if BLANK:
+        print(f"  [BLANK MODE] 자동 보정·후보 숨김 · 저장 위치: {store_io.result_dir()}")
     print("  GRF 점 클릭 → EAG 대응점 클릭 → Save")
     try:
         srv.serve_forever()

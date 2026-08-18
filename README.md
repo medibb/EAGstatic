@@ -172,6 +172,25 @@ python3 exclusion_store.py --clear --subject "..." --session s1 --channel 3
 `stats_grf_eag` → `excluded=True` 행 자동 제외 (`accepted=False`도 함께) /
 `edge_review` → 제외 채널은 worklist에 올리지 않음
 
+**신뢰도 파일럿** (`ANNOTATION_PROTOCOL.md` §5.3 · §8)
+
+```bash
+python3 reliability_pilot.py sessions --n 10   # 층화 추출 후 동결 (시작 전 커밋)
+python3 reliability_pilot.py baseline          # 자동 검출 스냅샷
+python3 reliability_pilot.py report --a rater_A --b rater_B   # LoA · tolerance 후보
+```
+
+rater별 저장소 격리는 환경변수 `EAG_RESULT_DIR`로 한다 (`store_io.py`). 세 저장소
+(`offset_manager` · `edge_store` · `exclusion_store`)와 `sync_analyzer`가 모두 따라온다.
+
+```bash
+EAG_RESULT_DIR=result/reliability/rater_A python3 offset_app.py --port 8768 --blank
+EAG_RESULT_DIR=result/reliability/rater_B python3 edge_app.py   --port 8769 --blank
+```
+
+`--blank`는 알고리즘의 초기값(offset 보정·후보, EAG edge 자동검출)을 숨긴다. GRF anchor는
+남긴다. 두 rater가 같은 자동값을 나란히 수용하면 일치도가 부풀려지기 때문이다.
+
 **작업 루프**
 
 ```

@@ -27,7 +27,17 @@ import os
 from datetime import datetime
 from typing import Optional
 
-DEFAULT_PATH = os.path.join(os.path.dirname(__file__), 'result', 'exclusions.json')
+from store_io import store_path, load_json, save_json_atomic
+
+STORE_FILENAME = 'exclusions.json'
+
+
+def default_path() -> str:
+    """저장 위치. `EAG_RESULT_DIR`로 바꿀 수 있다 (store_io 참조)."""
+    return store_path(STORE_FILENAME)
+
+
+DEFAULT_PATH = default_path()  # 하위호환 (import 시점 해석)
 
 # 사유는 자유 입력이지만, 집계가 가능하도록 표준 목록을 권장한다
 REASONS = [
@@ -42,18 +52,11 @@ SESSION_SCOPE = 0        # channel 0 = 세션 전체
 
 
 def load_exclusions(path: str = None) -> dict:
-    path = path or DEFAULT_PATH
-    if not os.path.exists(path):
-        return {}
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    return load_json(path or default_path())
 
 
 def save_exclusions(d: dict, path: str = None):
-    path = path or DEFAULT_PATH
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(d, f, ensure_ascii=False, indent=2)
+    save_json_atomic(path or default_path(), d)
 
 
 def set_exclusion(subject: str, session: str, channel: int = SESSION_SCOPE,
