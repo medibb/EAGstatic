@@ -513,6 +513,104 @@ def cmd_montage(args):
     print(f"\n→ {OUT_DIR}/montage.json")
 
 
+def _leadfield(g, A, parcels, electrodes, axis_mix=(0.5, 0.5)):
+    """파셀별 forward 해를 전극에서 샘플링해 lead field L (전극 × 파셀)을 만든다.
+
+    소스 방향은 §montage에서 **혼합**으로 좁혀졌으므로 접선·법선 가중합을 쓴다.
+    axis_mix = (접선 가중, 법선 가중).
+    """
+    cols = []
+    for (x, y, z, side) in parcels:
+        acc = None
+        for w, axis in ((axis_mix[0], 0), (axis_mix[1], 2)):
+            if w == 0:
+                continue
+            q = dipole_source(g, x, y, z, axis=axis)
+            phi, _ = solve_potential(A, q, g.shape)
+            sm = surface_map(phi) * w
+            acc = sm if acc is None else acc + sm
+        cols.append(sample_at(acc, g, electrodes))
+    L = np.stack(cols, axis=1)
+    return L - L.mean(axis=0, keepdims=True)      # 공통평균참조
+
+
+def cmd_localize(args):
+    """**역문제**: 표면 전위에서 국소 연골 결손의 위치를 되찾을 수 있는가.
+
+    Han 2014는 결손마다 표면 패턴이 다르다는 것까지 보였다(forward). 그 패턴에서
+    위치를 **되찾는** 것은 아무도 하지 않았다. 여기서 상한을 미리 구한다.
+
+    **설정.** 연골을 파셀로 나누고 각 파셀에 단위 소스를 준다(정상). 파셀 하나의
+    소스를 `--defect` 만큼 줄여 결손을 모의한다. 전극에서 측정하고 잡음을 더한 뒤,
+    정상 기준선과의 차이에서 어느 파셀이 줄었는지 추정한다.
+
+    **낙관적 가정 두 가지를 명시한다.**
+
+    1. **정상 기준선이 있다고 가정한다.** 실제로는 같은 무릎의 정상 상태를 모른다.
+       반대쪽 무릎을 쓰려 해도 Sim 2016이 양측 공간분포 유사도를 **중등도**로만
+       보고했으므로, 기준선 자체가 오차를 갖는다. 여기 나오는 성능은 **상한**이다.
+    2. 파셀 구조와 lead field를 정확히 안다고 가정한다. 실제로는 개인별 기하가 다르다.
+
+    **탐지 SNR이 측정 SNR보다 훨씬 나쁘다는 점에 주의.** 파셀 N개 중 하나가 d만큼
+    줄면 신호 변화는 전체의 약 d/N 이다. 측정 SNR 20 dB라도 8파셀·50% 결손이면
+    탐지 SNR은 20 + 20·log10(0.5/8) ≈ 4 dB 로 떨어진다.
+    """
+    g = Geometry(d_fat=args.fat)
+    A, _ = _prepare(g)
+    parcels = cartilage_parcels(g, args.parcels)
+    n_par = len(parcels)
+    pos = np.array([(x, y) for (x, y, z, sd) in parcels])
+
+    rng = np.random.default_rng(args.seed)
+    mixes = {'tangential': (1.0, 0.0), 'mixed 50/50': (0.5, 0.5), 'normal': (0.0, 1.0)}
+    layouts = [tuple(v) for v in (args.layouts or [(4, 4), (2, 4), (4, 8)])]
+
+    print(f"파셀 {n_par}개 · 결손 크기 {args.defect:.0%} · 시행 {args.trials}회/조건")
+    print(f"파셀 간 최소 간격 {np.min([np.linalg.norm(pos[i]-pos[j]) for i in range(n_par) for j in range(n_par) if i<j]):.0f} mm\n")
+
+    out = {}
+    for mname, mix in mixes.items():
+        for (nx_e, ny_e) in layouts:
+            el = electrode_grid(g, nx_e, ny_e)
+            L = _leadfield(g, A, parcels, el, mix)
+            s_norm = np.ones(n_par)
+            b_norm = L @ s_norm
+            sig_rms = np.sqrt(np.mean(b_norm ** 2))
+            row = {}
+            for snr_db in args.snr:
+                noise_rms = sig_rms * 10 ** (-snr_db / 20.0)
+                hits, errs = 0, []
+                for _ in range(args.trials):
+                    k = rng.integers(n_par)
+                    s_def = s_norm.copy(); s_def[k] -= args.defect
+                    b = L @ s_def + rng.normal(0, noise_rms, size=len(el))
+                    delta = b_norm - b                     # 결손 서명 + 잡음
+                    # Tikhonov 정규화 최소자승으로 소스 결핍 추정
+                    lam = args.lam * np.linalg.norm(L, 2) ** 2
+                    est = np.linalg.solve(L.T @ L + lam * np.eye(n_par), L.T @ delta)
+                    k_hat = int(np.argmax(est))
+                    hits += (k_hat == k)
+                    errs.append(float(np.linalg.norm(pos[k_hat] - pos[k])))
+                eff = snr_db + 20 * np.log10(args.defect / n_par)
+                row[snr_db] = {'top1': hits / args.trials,
+                               'median_err_mm': float(np.median(errs)),
+                               'p90_err_mm': float(np.percentile(errs, 90)),
+                               'effective_snr_db': float(eff)}
+            out[f'{mname} | {nx_e}x{ny_e}(n={len(el)})'] = row
+
+    print(f"{'조건':>28} {'측정SNR':>8} {'탐지SNR':>8} {'top-1':>7} {'중앙오차':>9} {'p90':>7}")
+    for k, row in out.items():
+        for snr, v in row.items():
+            print(f"{k:>28} {snr:8.0f} {v['effective_snr_db']:8.1f} "
+                  f"{v['top1']:7.2f} {v['median_err_mm']:8.0f}mm {v['p90_err_mm']:6.0f}mm")
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    json.dump({'parcels': n_par, 'defect': args.defect, 'result': out},
+              open(OUT_DIR / 'localize.json', 'w'), ensure_ascii=False, indent=2)
+    print(f"\n무작위 추정의 top-1 은 {1/n_par:.2f}, 중앙오차는 파셀 간 평균거리다.")
+    print("→ 이 값들과 비교해 실제 정보가 있는지 판단할 것.")
+    print(f"\n→ {OUT_DIR}/localize.json")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -545,6 +643,17 @@ def main():
 
     p = sub.add_parser('montage', help='OBJ2 montage 예측 대 실측 대조 (모델 검증)')
     p.set_defaults(func=cmd_montage)
+
+    p = sub.add_parser('localize', help='역문제: 결손 위치를 되찾을 수 있는가')
+    p.add_argument('--fat', type=float, default=6.0)
+    p.add_argument('--parcels', type=int, default=4)
+    p.add_argument('--defect', type=float, default=0.5, help='소스 감소분 (0~1)')
+    p.add_argument('--snr', type=float, nargs='+', default=[30, 20, 10])
+    p.add_argument('--trials', type=int, default=200)
+    p.add_argument('--lam', type=float, default=1e-3, help='Tikhonov 정규화 계수')
+    p.add_argument('--seed', type=int, default=20260819)
+    p.add_argument('--layouts', type=int, nargs='+', action='append', default=None)
+    p.set_defaults(func=cmd_localize)
 
     p = sub.add_parser('all', help='map → sweep → shield → rank 일괄')
     p.set_defaults(func=None)
