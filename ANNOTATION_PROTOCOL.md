@@ -162,12 +162,22 @@ python3 reliability_pilot.py sessions --n 10
 python3 reliability_pilot.py baseline
 
 # 3. rater가 각자 격리된 저장소에 백지로 작업 (§8.3)
-EAG_RESULT_DIR=result/reliability/rater_A python3 offset_app.py --host 0.0.0.0 --port 8768 --blank
-EAG_RESULT_DIR=result/reliability/rater_B python3 edge_app.py   --host 0.0.0.0 --port 8769 --blank
+#    두 rater가 **같은 일을 각자** 해야 한다. 따라서 앱 4개 = 포트 4개.
+#    EAG_RESULT_DIR은 절대경로로 준다 — store_io는 받은 값을 그대로 쓰므로,
+#    상대경로면 앱을 띄운 위치에 따라 rater 자료가 딴 데 쌓인다.
+R=$PWD/result/reliability
+EAG_RESULT_DIR=$R/rater_A python3 offset_app.py --host 0.0.0.0 --port 8768 --blank
+EAG_RESULT_DIR=$R/rater_A python3 edge_app.py   --host 0.0.0.0 --port 8769 --blank
+EAG_RESULT_DIR=$R/rater_B python3 offset_app.py --host 0.0.0.0 --port 8770 --blank
+EAG_RESULT_DIR=$R/rater_B python3 edge_app.py   --host 0.0.0.0 --port 8771 --blank
 
 # 4. LoA 산출 + tolerance 후보 제시
 python3 reliability_pilot.py report --a rater_A --b rater_B
 ```
+
+> **한 명에게 offset만, 다른 한 명에게 edge만 시키면 안 된다.** 비교할 공통 항목이
+> 없어져 리포트가 통째로 빈 채로 나온다 — 에러 없이, 며칠치 주석 작업을 마친 뒤에야.
+> `cmd_report`는 상대 rater에 항목이 없으면 조용히 건너뛴다.
 
 리포트는 tolerance를 0.02~0.80 s로 스윕하며 매칭 수와 F1을 보여준다.
 **F1이 평평해지기 시작하는 지점이 실질 상한**이다. 그보다 키우면 서로 다른 이벤트를
@@ -314,6 +324,25 @@ GRF만으로 잡혀 offset과 무관한 반면 EAG-anchor 매칭은 offset 오�
 
 30세션에서 60세션으로 늘려도 신뢰구간은 약 1.4배만 좁아진다. 수확체감이 빠르다.
 
+**본 분석에서 빠진 자료는 표본에서도 뺀다.** 분석에 쓰지 않을 세션의 일치도로 tolerance를
+정하면, 그 tolerance가 적용될 자료와 다른 모집단에서 나온 값이 된다. 두 경로로 거른다.
+
+| 경로 | 근거 파일 | 판정 |
+|---|---|---|
+| 방문 단위 | `result/cohort_manual.csv` → `data_flat/manifest.csv`의 `audit_ok` | 전수조사에서 방문째 제외 |
+| 세션 단위 | `result/exclusions.json` | 노이즈 등으로 사람이 표시한 제외 |
+
+`cohort_manual.csv`의 방문명에는 연구원이 붙인 QC 접미사가 남아 있고
+(`(02.19_17)이다은_1(분석안됨)`) 미러·manifest는 그걸 뗀 이름을 쓴다. 정규화는
+`build_flat_view.load_manual_cohort()`가 `strip_qc()`로 한 번만 수행하고, 하류는
+`audit_ok`를 읽는다. 같은 규칙을 두 곳에 두면 한쪽만 고쳐진다.
+
+**동결 상태 (2026-08-19).** 제외 151세션을 뺀 1081에서 층화 추출한 10세션
+(worklist 5 + 비worklist 5, 방문 중복 없음)을 `pilot_sessions.csv`로 동결하고,
+같은 시점의 자동 검출 결과를 `auto_baseline.json`으로 함께 커밋했다(`fbfc325`).
+표본을 다시 뽑으면 `baseline`도 반드시 다시 만든다 — §8.6이 "사람이 실제로 손댄
+이벤트"를 가려내는 기준이 그 스냅샷이기 때문이다.
+
 ### 8.3 독립 관찰 확보
 
 GUI는 자동 검출 결과를 초기값으로 그리고, 이미 확정된 세션은 `✅ [확정 ...s]`로 표시한다.
@@ -338,7 +367,20 @@ result/reliability/
 ```
 
 rater ID와 라운드를 **파일 필드가 아니라 디렉터리로** 표현하므로 저장소 스키마를
-바꿀 필요가 없다. 두 사람이 동시에 작업하려면 포트를 나눈다 (8768/8769 등, **3002 금지**).
+바꿀 필요가 없다.
+
+포트는 rater × 작업으로 나눈다. 본 캠페인(8765/8766)은 그대로 두고 별도 프로세스로 띄운다.
+`EAG_RESULT_DIR`은 프로세스별 환경변수라 서로 간섭하지 않는다.
+
+| rater | offset | edge | 저장소 |
+|---|---|---|---|
+| A | **8768** | **8769** | `result/reliability/rater_A/` |
+| B | **8770** | **8771** | `result/reliability/rater_B/` |
+| (본 캠페인) | 8766 | 8765 | `result/` |
+
+**누가 어느 포트를 쓰는지 먼저 못박고 시작한다.** 두 rater가 같은 code-server 로그인을
+공유하므로 주소만으로는 구분되지 않는다. 포트를 잘못 열면 상대 저장소에 쓰게 되고,
+그 시점에서 독립 관찰이 깨진다. **3002는 금지**(api-server 전용).
 
 **(2) 백지 모드** — 두 앱의 `--blank` 플래그.
 
@@ -471,3 +513,4 @@ Ch.4 4.2.7에 들어갈 문장 구조다. 대괄호는 확정 후 채운다.
 |---|---|
 | 2026-08-18 | 최초 작성. `REVIEW_WORKFLOW.md`의 프로토콜·판정 규칙을 흡수하고, 조작적 정의·tolerance·rater 자격·신뢰도 설계를 신설 |
 | 2026-08-18 | 구현 반영: `store_io.py`(EAG_RESULT_DIR 격리 + atomic write), 두 앱의 `--blank`, `reliability_pilot.py`(sessions/baseline/report). §5.3 절차와 §8.3을 실행 가능한 명령으로 교체 |
+| 2026-08-19 | rater당 앱 2개(포트 4개)로 정정. 이전 예시는 rater마다 다른 작업을 시켜 리포트가 비었다. §8.2에 표본 제외 기준(`audit_ok` · `exclusions.json`)과 동결 상태 추가. `EAG_RESULT_DIR` 절대경로 명시 |
