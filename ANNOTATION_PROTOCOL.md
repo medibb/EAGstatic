@@ -434,8 +434,15 @@ GRF 파형에 드러나 맹검이 불가능하므로, 이것이 확보 가능한
 
 | 앱 | `--blank`가 숨기는 것 | 남기는 것 |
 |---|---|---|
-| `offset_app.py` | 자동 보정(residual), best-match 후보, match 프로파일 | 원시 트레이스 |
+| `offset_app.py` | 자동 보정(residual), best-match 후보, match 프로파일 | 원시 트레이스, **EAG 변곡점 표식** |
 | `edge_app.py` | EAG edge 자동검출 | **GRF anchor 8개** |
+
+**offset 화면의 EAG 변곡점 표식은 가리지 않기로 했다 (2026-08-19).** `detect_eag_edges`가
+찾은 후보가 EAG 패널 하단에 파란 눈금으로 남는다(`offset_app.py:466`). 알고리즘 산출물이
+두 rater에게 동일하게 보이므로, 거기로 끌리는 만큼 일치도에 알고리즘의 결정론성이 섞인다.
+영향이 작다고 판단해 남겼다 — 이 표식은 offset 값을 지시하지 않고, `변곡점` 흡착도 이
+목록이 아니라 트레이스의 2차미분을 즉석 계산해 쓴다. **판단 근거를 남기는 것이 목적이므로
+Methods에 그대로 서술한다.** 완전 백지가 아니었다는 사실이 일치도 해석의 전제다.
 
 edge 쪽에서 anchor를 남기는 것이 중요하다. anchor는 GRF에서 나온 객관적 기준이고,
 사람이 재는 것은 그 자리의 knee 위치다. anchor까지 숨기면 다른 과제를 재게 된다.
@@ -577,3 +584,4 @@ Ch.4 4.2.7에 들어갈 문장 구조다. 대괄호는 확정 후 채운다.
 | 2026-08-18 | 구현 반영: `store_io.py`(EAG_RESULT_DIR 격리 + atomic write), 두 앱의 `--blank`, `reliability_pilot.py`(sessions/baseline/report). §5.3 절차와 §8.3을 실행 가능한 명령으로 교체 |
 | 2026-08-19 | rater당 앱 2개(포트 4개)로 정정. 이전 예시는 rater마다 다른 작업을 시켜 리포트가 비었다. §8.2에 표본 제외 기준(`audit_ok` · `exclusions.json`)과 동결 상태 추가. `EAG_RESULT_DIR` 절대경로 명시 |
 | 2026-08-19 | 채널 분모를 PASS 규칙으로 사전 동결(`channels` 서브커맨드, §8.2). 리포트에 커버리지 이행 점검과 제외 판단 kappa 추가(§8.4b) — 이전에는 한쪽만 작업한 채널이 조용히 빠져 LoA가 좁게 나왔다(시뮬레이션에서 반폭 0.060 vs 실제 0.174) |
+| 2026-08-19 | rater 역할을 이름·포트로 분리(`rater_main`/`rater_rel`/`rater_ref`, 포트 6개). tolerance는 세 쌍 중 가장 넓은 것에서 채택 — §6의 순환이 풀린다. §8.3 백지 모드 표를 실제 동작에 맞게 정정(offset 화면의 EAG 변곡점 표식은 남는다) |
