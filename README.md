@@ -101,6 +101,7 @@ EAGstatic/
 | `ANNOTATION_GUIDE.md` | 접속·조작·저장 실무 안내 | 연구원 |
 | **이 문서** | 코드 구조, 파이프라인, CLI | 개발·재현 |
 | `STATS_PLAN.md` | 통계 설계 (dose-response) | 분석 |
+| **`REANALYSIS.md`** | **annotation 확정 후 재분석 순서와 문서 갱신 체크리스트** | 확정 이후 |
 
 > 판정 기준은 `ANNOTATION_PROTOCOL.md` **한 곳에만** 존재합니다. 다른 문서는 링크만 하고
 > 기준을 다시 쓰지 않습니다. 기준을 고칠 때는 그 문서만 고치면 됩니다.

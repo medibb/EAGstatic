@@ -611,6 +611,110 @@ def cmd_localize(args):
     print(f"\n→ {OUT_DIR}/localize.json")
 
 
+# 문헌 통상 범위 (S/m, 저주파). 자리표시자 값을 이 범위에서 흔들어 결론의 견고성을 본다.
+SIGMA_RANGE = {
+    'skin':      (0.10, 1.00),
+    'fat':       (0.02, 0.08),
+    'muscle':    (0.20, 0.60),
+    'bone':      (0.003, 0.020),
+    'marrow':    (0.03, 0.12),
+    'cartilage': (0.10, 0.30),
+    'synovial':  (1.00, 2.00),
+}
+
+
+def cmd_sensitivity(args):
+    """전도도를 문헌 범위에서 흔들어 **결론이 견고한지** 본다.
+
+    Tier A의 전도도는 자리표시자다. 논문에 쓰려면 "값이 아니라 비율에서 나오는
+    결론"임을 보여야 하고, 그 증명이 이 스윕이다. 네 결론을 각 추출마다 재검정한다.
+
+      (1) PSF 폭이 수십 mm인가          (전극 간격 지침)
+      (2) 뼈 위 차폐가 존재하는가        (창 효과)
+      (3) 지방이 두꺼우면 진폭이 커지는가 (sEMG 직관과 반대)
+      (4) 4×4가 8×2보다 rank가 높은가    (배치 > 개수)
+
+    각 항목의 **부호·방향이 유지되는 비율**을 보고한다. 절대값이 아니라 방향이
+    유지되면 결론이 전도도 값에 의존하지 않는다는 뜻이다.
+    """
+    rng = np.random.default_rng(args.seed)
+    orig = dict(CONDUCTIVITY)
+    rows = []
+    print(f"추출 {args.n}회 (rank는 앞 {args.n_rank}회만)\n")
+    for it in range(args.n):
+        for k, (lo, hi) in SIGMA_RANGE.items():
+            CONDUCTIVITY[k] = float(np.exp(rng.uniform(np.log(lo), np.log(hi))))
+        r = {'iter': it, **{k: round(CONDUCTIVITY[k], 4) for k in SIGMA_RANGE}}
+
+        # (1)(3) PSF 폭과 지방 방향
+        peaks = {}
+        for fat in (4.0, 10.0):
+            g = Geometry(d_fat=fat); A, _ = _prepare(g)
+            q = dipole_source(g, g.x_joint, g.ny * g.h / 2, g.z_bone + 6.0, axis=0)
+            phi, _ = solve_potential(A, q, g.shape)
+            m = psf_width(surface_map(phi), g)
+            peaks[fat] = abs(m['peak'])
+            if fat == 6.0 or fat == 4.0:
+                r['psf_x_mm'] = m['fwhm_x_mm']
+        r['fat_ratio'] = peaks[10.0] / peaks[4.0] if peaks[4.0] else np.nan
+
+        # (2) 골 차폐 (뼈 위 30mm 지점)
+        vals = {}
+        for nb in (False, True):
+            g = Geometry(no_bone=nb); A, _ = _prepare(g)
+            q = dipole_source(g, g.x_joint, g.ny * g.h / 2, g.z_bone + 6.0, axis=0)
+            phi, _ = solve_potential(A, q, g.shape)
+            vals[nb] = abs(sample_at(surface_map(phi), g,
+                                     [(g.x_joint + 30.0, g.ny * g.h / 2)])[0])
+        r['shield_x'] = vals[True] / vals[False] if vals[False] else np.nan
+
+        # (4) 배치 대 개수
+        if it < args.n_rank:
+            g = Geometry(); A, _ = _prepare(g)
+            par = cartilage_parcels(g, 4)
+            cols = []
+            for (x, y, z, sd) in par:
+                q = dipole_source(g, x, y, z)
+                phi, _ = solve_potential(A, q, g.shape)
+                cols.append(surface_map(phi))
+            for tag, (nxe, nye) in (('rank_4x4', (4, 4)), ('rank_8x2', (8, 2))):
+                el = electrode_grid(g, nxe, nye)
+                L = np.stack([sample_at(c, g, el) for c in cols], axis=1)
+                L = L - L.mean(axis=0, keepdims=True)
+                r[tag] = effective_rank(L, 20.0)['effective_rank']
+        rows.append(r)
+        print(f"  [{it+1}/{args.n}] PSF-x {r['psf_x_mm']:.0f}mm · 지방비 {r['fat_ratio']:.2f} "
+              f"· 차폐 {r['shield_x']:.1f}배"
+              + (f" · rank 4x4={r.get('rank_4x4')} 8x2={r.get('rank_8x2')}"
+                 if 'rank_4x4' in r else ''), flush=True)
+    CONDUCTIVITY.clear(); CONDUCTIVITY.update(orig)
+
+    import statistics as st
+    psf = [r['psf_x_mm'] for r in rows if np.isfinite(r['psf_x_mm'])]
+    fr = [r['fat_ratio'] for r in rows if np.isfinite(r['fat_ratio'])]
+    sh = [r['shield_x'] for r in rows if np.isfinite(r['shield_x'])]
+    rk = [(r['rank_4x4'], r['rank_8x2']) for r in rows if 'rank_4x4' in r]
+
+    print("\n" + "=" * 62)
+    print(f"(1) PSF-x 폭        중앙 {st.median(psf):.0f} mm · 범위 {min(psf):.0f}~{max(psf):.0f}")
+    print(f"    → 20 mm 이상 비율 {np.mean([v >= 20 for v in psf]):.2f}  (수십 mm 결론)")
+    print(f"(2) 차폐 배수       중앙 {st.median(sh):.1f} · 범위 {min(sh):.1f}~{max(sh):.1f}")
+    print(f"    → 1보다 큰 비율 {np.mean([v > 1 for v in sh]):.2f}  (뼈가 신호를 줄인다)")
+    print(f"(3) 지방 두께 비    중앙 {st.median(fr):.2f} · 범위 {min(fr):.2f}~{max(fr):.2f}")
+    print(f"    → 1보다 큰 비율 {np.mean([v > 1 for v in fr]):.2f}  (두꺼울수록 커진다)")
+    if rk:
+        print(f"(4) rank 4x4 > 8x2 비율 {np.mean([a > b for a, b in rk]):.2f}  (n={len(rk)})")
+    print("=" * 62)
+    print("방향 유지 비율이 높을수록 결론이 전도도 값에 의존하지 않는다는 뜻이다.")
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    import csv as _csv
+    with open(OUT_DIR / 'sensitivity.csv', 'w', newline='', encoding='utf-8') as f:
+        w = _csv.DictWriter(f, fieldnames=sorted({k for r in rows for k in r}))
+        w.writeheader(); w.writerows(rows)
+    print(f"→ {OUT_DIR}/sensitivity.csv")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -654,6 +758,12 @@ def main():
     p.add_argument('--seed', type=int, default=20260819)
     p.add_argument('--layouts', type=int, nargs='+', action='append', default=None)
     p.set_defaults(func=cmd_localize)
+
+    p = sub.add_parser('sensitivity', help='전도도 문헌 범위 스윕 → 결론 견고성')
+    p.add_argument('--n', type=int, default=20)
+    p.add_argument('--n-rank', type=int, default=5)
+    p.add_argument('--seed', type=int, default=20260819)
+    p.set_defaults(func=cmd_sensitivity)
 
     p = sub.add_parser('all', help='map → sweep → shield → rank 일괄')
     p.set_defaults(func=None)
