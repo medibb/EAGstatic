@@ -18,12 +18,15 @@
     # 두 rater는 **같은 일**을 각자 해야 한다. 한 명에게 offset만, 다른 한 명에게 edge만
     # 시키면 비교할 공통 항목이 없어 리포트가 통째로 빈다. 따라서 앱 4개 = 포트 4개다.
     R=$PWD/result/reliability        # 상대경로는 실행 위치에 따라 딴 데 쌓인다
-    EAG_RESULT_DIR=$R/rater_A python3 offset_app.py --port 8768 --blank
-    EAG_RESULT_DIR=$R/rater_A python3 edge_app.py   --port 8769 --blank
-    EAG_RESULT_DIR=$R/rater_B python3 offset_app.py --port 8770 --blank
-    EAG_RESULT_DIR=$R/rater_B python3 edge_app.py   --port 8771 --blank
+    EAG_RESULT_DIR=$R/rater_main python3 offset_app.py --port 8768 --blank
+    EAG_RESULT_DIR=$R/rater_main python3 edge_app.py   --port 8769 --blank
+    EAG_RESULT_DIR=$R/rater_rel  python3 offset_app.py --port 8770 --blank
+    EAG_RESULT_DIR=$R/rater_rel  python3 edge_app.py   --port 8771 --blank
+    EAG_RESULT_DIR=$R/rater_ref  python3 offset_app.py --port 8772 --blank
+    EAG_RESULT_DIR=$R/rater_ref  python3 edge_app.py   --port 8773 --blank
 
-    python3 reliability_pilot.py report --a rater_A --b rater_B
+    # 쌍마다 재는 것이 다르다 (PROTOCOL §8.3). tolerance는 가장 넓은 쌍에서 채택한다.
+    python3 reliability_pilot.py report --a rater_main --b rater_rel
 
 세션 표본은 시드를 고정해 재현 가능하게 뽑되, **뽑은 결과를 파일로 동결**한다.
 사후에 세션을 고르면 표본 선택 편의가 되기 때문이다.
@@ -623,8 +626,8 @@ def main():
     p2.set_defaults(func=cmd_baseline)
 
     p3 = sub.add_parser('report', help='rater 두 명 비교 → LoA · tolerance 후보')
-    p3.add_argument('--a', default='rater_A')
-    p3.add_argument('--b', default='rater_B')
+    p3.add_argument('--a', default='rater_main')
+    p3.add_argument('--b', default='rater_rel')
     p3.add_argument('--ref-tol', type=float, default=None,
                     help='시점·진폭 LoA를 볼 기준 tolerance (기본: 스윕 plateau)')
     p3.set_defaults(func=cmd_report)

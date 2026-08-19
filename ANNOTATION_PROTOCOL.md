@@ -169,13 +169,17 @@ python3 reliability_pilot.py baseline
 #    EAG_RESULT_DIR은 절대경로로 준다 — store_io는 받은 값을 그대로 쓰므로,
 #    상대경로면 앱을 띄운 위치에 따라 rater 자료가 딴 데 쌓인다.
 R=$PWD/result/reliability
-EAG_RESULT_DIR=$R/rater_A python3 offset_app.py --host 0.0.0.0 --port 8768 --blank
-EAG_RESULT_DIR=$R/rater_A python3 edge_app.py   --host 0.0.0.0 --port 8769 --blank
-EAG_RESULT_DIR=$R/rater_B python3 offset_app.py --host 0.0.0.0 --port 8770 --blank
-EAG_RESULT_DIR=$R/rater_B python3 edge_app.py   --host 0.0.0.0 --port 8771 --blank
+EAG_RESULT_DIR=$R/rater_main python3 offset_app.py --host 0.0.0.0 --port 8768 --blank
+EAG_RESULT_DIR=$R/rater_main python3 edge_app.py   --host 0.0.0.0 --port 8769 --blank
+EAG_RESULT_DIR=$R/rater_rel  python3 offset_app.py --host 0.0.0.0 --port 8770 --blank
+EAG_RESULT_DIR=$R/rater_rel  python3 edge_app.py   --host 0.0.0.0 --port 8771 --blank
+EAG_RESULT_DIR=$R/rater_ref  python3 offset_app.py --host 0.0.0.0 --port 8772 --blank
+EAG_RESULT_DIR=$R/rater_ref  python3 edge_app.py   --host 0.0.0.0 --port 8773 --blank
 
-# 4. LoA 산출 + tolerance 후보 제시
-python3 reliability_pilot.py report --a rater_A --b rater_B
+# 4. 쌍별 LoA. 어느 쌍이 무엇을 재는지는 §8.3의 역할표를 볼 것
+python3 reliability_pilot.py report --a rater_main --b rater_rel   # Methods 대표값
+python3 reliability_pilot.py report --a rater_ref  --b rater_main  # §6 자격 판정
+python3 reliability_pilot.py report --a rater_ref  --b rater_rel   # 참고
 ```
 
 > **한 명에게 offset만, 다른 한 명에게 edge만 시키면 안 된다.** 비교할 공통 항목이
@@ -384,9 +388,11 @@ GUI는 자동 검출 결과를 초기값으로 그리고, 이미 확정된 세�
 result/reliability/
 ├── pilot_sessions.csv       # 대상 목록 (동결, git 추적)
 ├── auto_baseline.json       # 자동 검출 스냅샷
-├── rater_A/{manual_offsets,manual_edges,exclusions}.json
-├── rater_B/…
-├── round2_rater_A/…         # intra-rater 재검토 (2주 후)
+├── pilot_channels.csv       # 채널 분모 (동결, git 추적)
+├── rater_main/{manual_offsets,manual_edges,exclusions}.json
+├── rater_rel/…              # 신뢰도 전용 rater
+├── rater_ref/…              # PI (정본)
+├── round2_rater_main/…      # intra-rater 재검토 (2주 후)
 └── report/                  # LoA 표, tolerance 스윕
 ```
 
@@ -396,11 +402,29 @@ rater ID와 라운드를 **파일 필드가 아니라 디렉터리로** 표현�
 포트는 rater × 작업으로 나눈다. 본 캠페인(8765/8766)은 그대로 두고 별도 프로세스로 띄운다.
 `EAG_RESULT_DIR`은 프로세스별 환경변수라 서로 간섭하지 않는다.
 
-| rater | offset | edge | 저장소 |
-|---|---|---|---|
-| A | **8768** | **8769** | `result/reliability/rater_A/` |
-| B | **8770** | **8771** | `result/reliability/rater_B/` |
-| (본 캠페인) | 8766 | 8765 | `result/` |
+| 역할 | 누구 | offset | edge | 저장소 |
+|---|---|---|---|---|
+| `rater_main` | 주연구원 (본 캠페인도 이 사람) | **8768** | **8769** | `result/reliability/rater_main/` |
+| `rater_rel` | 신뢰도 전용 rater (**가설 비공개**) | **8770** | **8771** | `result/reliability/rater_rel/` |
+| `rater_ref` | PI (정본) | **8772** | **8773** | `result/reliability/rater_ref/` |
+| (본 캠페인) | 주연구원 | 8766 | 8765 | `result/` |
+
+세 사람이 **같은 동결 표본**을 각자 하면 쌍이 3개 나온다. 쌍마다 재는 것이 다르다.
+
+| 쌍 | 산출 | 용도 |
+|---|---|---|
+| `rater_main` ↔ `rater_rel` | inter-rater LoA | **Methods 대표값** (둘 다 프로토콜 작성자가 아님) |
+| `rater_ref` ↔ `rater_main` | criterion 일치 | §6 자격 판정 |
+| `rater_ref` ↔ `rater_rel` | 참고 | 프로토콜 전달력 점검 |
+
+**tolerance는 세 쌍 중 가장 넓은 것에서 채택한다.** 좁은 쌍(둘 다 숙련·한 명은 작성자)에서
+뽑아 느슨한 쌍에 적용하면, 같은 이벤트를 가리킨 두 표시가 창 밖으로 밀려
+`삭제 + 추가`로 계산된다 — 그 사람의 신뢰도가 아니라 창을 잘못 고른 결과가 보고된다.
+가장 넓은 쌍에서 뽑으면 §6의 순환(정본 설정자가 포함된 쌍에서 나온 창으로 그 정본과의
+일치를 판정하는 것)도 함께 풀린다.
+
+`rater_rel`에게는 **가설을 알리지 않는다.** §2·§5만 훈련시킨다. 조건(s/f/c)은 세션명과
+GRF 파형에 드러나 맹검이 불가능하므로, 이것이 확보 가능한 유일한 맹검 층이다.
 
 **누가 어느 포트를 쓰는지 먼저 못박고 시작한다.** 두 rater가 같은 code-server 로그인을
 공유하므로 주소만으로는 구분되지 않는다. 포트를 잘못 열면 상대 저장소에 쓰게 되고,
