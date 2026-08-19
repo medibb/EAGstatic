@@ -97,6 +97,11 @@ class Geometry:
 
     no_bone: bool = False  # True면 뼈를 근육으로 치환 (차폐 대조군)
 
+    # 내외측 비대칭. 내측 무릎은 피하지방이 얇고 외측은 두껍다.
+    # None이면 d_fat 균일. 값을 주면 y를 따라 선형으로 변한다.
+    d_fat_med: float = None   # y 낮은 쪽(내측)
+    d_fat_lat: float = None   # y 높은 쪽(외측)
+
     @property
     def shape(self):
         return (self.nx, self.ny, self.nz)
@@ -114,7 +119,13 @@ def build_labels(g: Geometry) -> np.ndarray:
     lab = np.full(g.shape, LABELS['muscle'], dtype=np.int8)
 
     lab[Z < g.d_skin] = LABELS['skin']
-    lab[(Z >= g.d_skin) & (Z < g.d_skin + g.d_fat)] = LABELS['fat']
+    if g.d_fat_med is None or g.d_fat_lat is None:
+        fat_t = np.full(g.shape, g.d_fat)
+    else:
+        _, Y, _ = g.coords()
+        frac = Y / (g.ny * g.h)
+        fat_t = g.d_fat_med + (g.d_fat_lat - g.d_fat_med) * frac
+    lab[(Z >= g.d_skin) & (Z < g.d_skin + fat_t)] = LABELS['fat']
 
     deep = Z >= g.z_bone
     dx = np.abs(X - g.x_joint)
@@ -418,6 +429,90 @@ def cmd_rank(args):
     print(f"→ {OUT_DIR}/rank.json")
 
 
+def cmd_montage(args):
+    """OBJ2 montage를 모델에 심고 채널별 예측을 실측과 대조한다.
+
+    이 시뮬레이터는 지금까지 예측만 했고 검증이 없었다. 실측이 이미 있는 두 비를
+    모델이 재현하는지 보면, 모델의 타당성과 소스 방향을 동시에 검정할 수 있다.
+
+    **montage** (Ch.4 Table 4.1). 근위 줄 4개(Ch1,2,5,6)와 관절선 줄 4개(Ch3,4,7,8),
+    내측 열(Ch1-4)과 외측 열(Ch5-8). 레퍼런스는 경골 원위 10 cm.
+    모델에서는 원거리 경계가 φ=0 이므로 원위 레퍼런스가 자연히 근사된다.
+
+    **실측 대조값** (70,566 이벤트)
+        내측/외측 기울기비  1.85 / 0.77 = 2.40
+        근위/관절선 기울기비 1.42 / 1.20 = 1.18
+
+    **두 질문.**
+
+    (a) 기하만으로 내외측 2.4배가 나오는가.
+        좌우 소스를 **같은 크기**로 주고 비를 잰다. 해부학적 비대칭(내측 지방이 얇음)을
+        넣어도 재현되지 않으면, 실측 2.4배는 **소스 강도 차이**로 귀속된다.
+        그 경우 Mayr 2026의 접촉면적 증가비 15.0/6.7 = 2.24 와 대조할 수 있다.
+
+    (b) 근위/관절선 비가 소스 방향을 가르는가.
+        접선 쌍극자는 관절선이 null이라 비가 크게, 법선은 관절선이 최대라 비가 1보다
+        작게 나와야 한다. 실측 1.18이 어느 쪽에 가까운지 본다.
+    """
+    OBS_ML, OBS_PJ = 2.40, 1.18
+    yc = None
+    print("실측 대조: 내측/외측 = 2.40 · 근위/관절선 = 1.18\n")
+    out = {}
+    for tag, (fm, fl) in (('지방 대칭', (None, None)),
+                          ('지방 비대칭(내 3mm / 외 9mm)', (3.0, 9.0)),
+                          ('지방 비대칭(내 4mm / 외 12mm)', (4.0, 12.0))):
+        for axis, aname in ((0, 'tangential'), (2, 'normal')):
+            g = Geometry(nx=90, h=2.0, x_joint=60.0, d_fat_med=fm, d_fat_lat=fl)
+            yc = g.ny * g.h / 2
+            A, _ = _prepare(g)
+            y_med, y_lat = yc - 25.0, yc + 25.0
+            el = {'prox_med': (g.x_joint - 25.0, y_med),
+                  'prox_lat': (g.x_joint - 25.0, y_lat),
+                  'jl_med':   (g.x_joint, y_med),
+                  'jl_lat':   (g.x_joint, y_lat)}
+            v = {}
+            for src_name, y_src in (('med', y_med), ('lat', y_lat)):
+                q = dipole_source(g, g.x_joint, y_src, g.z_bone + 6.0, axis=axis)
+                phi, _ = solve_potential(A, q, g.shape)
+                surf = surface_map(phi)
+                for k, pos in el.items():
+                    v[f'{src_name}->{k}'] = abs(sample_at(surf, g, [pos])[0])
+            # 내측 소스가 내측 전극에, 외측 소스가 외측 전극에 만드는 값의 비
+            ml = ((v['med->jl_med'] + v['med->prox_med']) /
+                  (v['lat->jl_lat'] + v['lat->prox_lat']))
+            # 근위/관절선 (내측 소스 기준)
+            pj = v['med->prox_med'] / v['med->jl_med'] if v['med->jl_med'] else float('inf')
+            out[f'{tag} | {aname}'] = {'medial_lateral': ml, 'prox_jointline': pj,
+                                       'raw': {k: float(x) for k, x in v.items()}}
+            print(f"[{tag:28s} | {aname:10s}]  내측/외측 {ml:5.2f}  ·  근위/관절선 {pj:5.2f}")
+        print()
+
+    print("=" * 68)
+    print("해석")
+    print("=" * 68)
+    best_ml = max((abs(np.log(d['medial_lateral'] / OBS_ML)), k)
+                  for k, d in out.items())
+    ml_vals = {k: d['medial_lateral'] for k, d in out.items()}
+    pj_vals = {k: d['prox_jointline'] for k, d in out.items()}
+    print(f"내측/외측: 모델 범위 {min(ml_vals.values()):.2f}~{max(ml_vals.values()):.2f} "
+          f"· 실측 {OBS_ML:.2f}")
+    if max(ml_vals.values()) < OBS_ML * 0.7:
+        print("  → **기하만으로는 실측 2.40을 못 만든다.** 차이는 소스 강도로 귀속되며,")
+        print("     Mayr 2026의 접촉면적 증가비 2.24와 대조할 수 있다.")
+    else:
+        print("  → 기하가 상당 부분을 설명한다. 소스 귀속에 신중할 것.")
+    print(f"\n근위/관절선: 실측 {OBS_PJ:.2f}")
+    for k, val in pj_vals.items():
+        print(f"  {k:45s} {val:5.2f}")
+    print("  → 접선은 관절선이 null이라 비가 크고, 법선은 1 이하여야 한다.")
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    json.dump({'observed': {'medial_lateral': OBS_ML, 'prox_jointline': OBS_PJ},
+               'model': out}, open(OUT_DIR / 'montage.json', 'w'),
+              ensure_ascii=False, indent=2)
+    print(f"\n→ {OUT_DIR}/montage.json")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -447,6 +542,9 @@ def main():
     p.add_argument('--layouts', type=int, nargs='+', action='append',
                    default=None, metavar='NX NY')
     p.set_defaults(func=cmd_rank)
+
+    p = sub.add_parser('montage', help='OBJ2 montage 예측 대 실측 대조 (모델 검증)')
+    p.set_defaults(func=cmd_montage)
 
     p = sub.add_parser('all', help='map → sweep → shield → rank 일괄')
     p.set_defaults(func=None)
