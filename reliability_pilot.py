@@ -14,9 +14,14 @@
     python3 reliability_pilot.py sessions --n 10
     python3 reliability_pilot.py baseline
 
-    # rater가 각자 격리된 저장소에 백지로 작업
-    EAG_RESULT_DIR=result/reliability/rater_A python3 offset_app.py --port 8768 --blank
-    EAG_RESULT_DIR=result/reliability/rater_B python3 edge_app.py   --port 8769 --blank
+    # rater가 각자 격리된 저장소에 백지로 작업.
+    # 두 rater는 **같은 일**을 각자 해야 한다. 한 명에게 offset만, 다른 한 명에게 edge만
+    # 시키면 비교할 공통 항목이 없어 리포트가 통째로 빈다. 따라서 앱 4개 = 포트 4개다.
+    R=$PWD/result/reliability        # 상대경로는 실행 위치에 따라 딴 데 쌓인다
+    EAG_RESULT_DIR=$R/rater_A python3 offset_app.py --port 8768 --blank
+    EAG_RESULT_DIR=$R/rater_A python3 edge_app.py   --port 8769 --blank
+    EAG_RESULT_DIR=$R/rater_B python3 offset_app.py --port 8770 --blank
+    EAG_RESULT_DIR=$R/rater_B python3 edge_app.py   --port 8771 --blank
 
     python3 reliability_pilot.py report --a rater_A --b rater_B
 
@@ -69,6 +74,29 @@ def load_worklist_keys() -> set:
         return {(r.get('subject', ''), r.get('session', '')) for r in csv.DictReader(f)}
 
 
+def load_excluded_keys() -> dict:
+    """표본에서 뺄 대상. 방문 단위(전수조사)와 세션 단위(사람이 표시한 분석제외).
+
+    방문 판정은 cohort_manual.csv 원본이 아니라 manifest의 `audit_ok`를 읽는다.
+    원본 CSV의 방문명에는 QC 접미사가 남아 있어 미러의 이름과 다르고, 그 정규화는
+    build_flat_view가 이미 한 번 했다. 여기서 다시 하면 규칙이 두 곳으로 갈라진다.
+    """
+    visits, sessions = set(), set()
+    man = Path('data_flat/manifest.csv')
+    if man.exists():
+        with open(man, encoding='utf-8') as f:
+            for r in csv.DictReader(f):
+                if str(r.get('audit_ok', 'True')).strip().lower() in ('false', '0', 'no'):
+                    visits.add(r['visit'])
+    exc = Path('result/exclusions.json')
+    if exc.exists():
+        with open(exc, encoding='utf-8') as f:
+            for subj, sess_map in json.load(f).items():
+                for sess in sess_map:
+                    sessions.add((subj, sess))
+    return {'visits': visits, 'sessions': sessions}
+
+
 def read_pilot_sessions() -> list:
     if not SESSIONS_CSV.exists():
         raise SystemExit(f"{SESSIONS_CSV} 없음. 먼저 `sessions` 서브커맨드를 실행하세요.")
@@ -96,16 +124,25 @@ def cmd_sessions(args):
 
     worklist(163세션)는 이미 어려운 쪽으로 치우쳐 있다. 거기서만 뽑으면 최악 신뢰도,
     전체에서만 뽑으면 낙관적 신뢰도가 나오므로 두 층을 같이 본다.
+
+    본 분석에서 빠진 자료는 표본에서도 뺀다. 분석에 쓰지 않을 세션의 일치도로 tolerance를
+    정하면 그 tolerance가 적용될 자료와 다른 모집단에서 나온 값이 된다. 두 경로로 빠진다.
+      - 방문 단위: cohort_manual.csv의 전수조사 판정(manifest의 audit_ok)
+      - 세션 단위: exclusions.json (노이즈 등으로 사람이 표시한 것)
     """
     from offset_app import scan_sessions
 
     wl = load_worklist_keys()
+    excluded = load_excluded_keys()
     with _quiet():
         allsess = scan_sessions()
 
-    hard, easy = [], []
+    hard, easy, dropped = [], [], []
     for s in allsess:
         key = (s['subject'], s['session'])
+        if s['subject'] in excluded['visits'] or key in excluded['sessions']:
+            dropped.append(s)
+            continue
         (hard if key in wl else easy).append(s)
 
     rng = random.Random(args.seed)
@@ -127,7 +164,9 @@ def cmd_sessions(args):
         w.writeheader()
         w.writerows(rows)
 
-    print(f"전체 세션 {len(allsess)} (worklist {len(hard)} / 그 외 {len(easy)})")
+    print(f"전체 세션 {len(allsess)} · 제외 {len(dropped)} "
+          f"(방문 판정 {len(excluded['visits'])}개 · 세션 표시 {len(excluded['sessions'])}건)")
+    print(f"추출 모집단 {len(hard) + len(easy)} (worklist {len(hard)} / 그 외 {len(easy)})")
     print(f"표본 {len(rows)}개 → {SESSIONS_CSV}  (seed={args.seed})")
     for r in rows:
         print(f"  [{r['stratum']:13s}] {r['subject']} / {r['session']}")

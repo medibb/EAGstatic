@@ -25,6 +25,28 @@ def strip_qc(name):
     return QC_SUFFIX.sub('', name).strip(), flags
 
 
+def load_manual_cohort(path='result/cohort_manual.csv'):
+    """전수조사로 확정한 방문 단위 포함/제외 목록.
+
+    자동 기준(조건당 min_takes)과 **분리해서** 기록한다. 자동 기준은 재현 가능한
+    규칙이고 이쪽은 사람이 원자료를 확인해 내린 판단이므로, 둘을 한 컬럼에 섞으면
+    나중에 어떤 근거로 빠졌는지 추적할 수 없다.
+
+    이 파일의 방문명은 연구원이 원본 폴더에서 옮겨 적은 것이라 QC 접미사가 남아 있다
+    ('(02.19_17)이다은_1(분석안됨)'). 미러·manifest는 strip_qc로 접미사를 뗀 이름을 쓰므로
+    같은 규칙으로 정규화해야 키가 맞는다. 정규화 없이 넣으면 조회가 빗나가고, 조회 실패는
+    기본값 True(포함)로 떨어져 **제외가 조용히 무시된다**.
+    """
+    if not os.path.exists(path):
+        return None
+    keep = {}
+    with open(path, encoding='utf-8-sig') as fh:
+        for r in csv.DictReader(fh):
+            visit, _ = strip_qc(r['visit'])
+            keep[visit] = str(r['include']).strip().lower() in ('true', '1', 'yes')
+    return keep
+
+
 def annotate_cohort(manifest, min_takes=3):
     """방문×조건별 분석가능 테이크 수를 세어 축별 적격 여부를 각 행에 붙인다.
 
@@ -35,16 +57,28 @@ def annotate_cohort(manifest, min_takes=3):
       axis_a  s,f >= min_takes          (부하 방향 대비)
       axis_b  s,f,c 모두 >= min_takes   (목발 부분체중부하 포함)
     """
+    manual = load_manual_cohort()
     n = {}
     for r in manifest:
         if r['analysable']:
             n.setdefault(r['visit'], {}).setdefault(r['condition'], 0)
             n[r['visit']][r['condition']] += 1
+    # 어느 방문에도 걸리지 않은 판정은 소리 없이 사라진다(조회 실패 → 기본값 포함).
+    # 오타·이름 변경을 잡으려면 반드시 눈에 보여야 한다.
+    if manual:
+        orphan = sorted(set(manual) - {r['visit'] for r in manifest})
+        if orphan:
+            print(f"[경고] cohort_manual.csv의 판정 {len(orphan)}건이 어느 방문과도 "
+                  f"일치하지 않아 무시됩니다:")
+            for v in orphan:
+                print(f"         {v}  (include={manual[v]})")
     for r in manifest:
         c = n.get(r['visit'], {})
         ok = lambda k: c.get(k, 0) >= min_takes
         r['n_takes_cond'] = c.get(r['condition'], 0)
-        r['axis_a'] = ok('s') and ok('f')
+        # audit_ok = 전수조사 판정, axis_* = 자동 기준. 둘 다 만족해야 분석에 들어간다.
+        r['audit_ok'] = True if manual is None else manual.get(r['visit'], True)
+        r['axis_a'] = r['audit_ok'] and ok('s') and ok('f')
         r['axis_b'] = r['axis_a'] and ok('c')
     return manifest
 
