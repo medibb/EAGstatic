@@ -1,0 +1,6290 @@
+{
+ "(02.09_15)김현진_2": {
+  "c5": {
+   "auto_offset": -0.744,
+   "residual": 0.26,
+   "corrected_offset": -0.484,
+   "method": "grf-edge-align (7/10, med=-0.04s)",
+   "anchors": [
+    13.396,
+    18.328,
+    23.676,
+    28.632,
+    33.724,
+    39.028,
+    43.796,
+    49.004
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 13.38,
+      "onset_amp": -4.99,
+      "offset_time": 13.5,
+      "offset_amp": -26.23
+     },
+     {
+      "onset_time": 18.656,
+      "onset_amp": -64.14,
+      "offset_time": 18.844,
+      "offset_amp": -49.76
+     },
+     {
+      "onset_time": 23.716,
+      "onset_amp": -121.58,
+      "offset_time": 24.1,
+      "offset_amp": -153.74
+     },
+     {
+      "onset_time": 28.692,
+      "onset_amp": -132.02,
+      "offset_time": 29.18,
+      "offset_amp": -102.99
+     },
+     {
+      "onset_time": 33.868,
+      "onset_amp": -95.85,
+      "offset_time": 34.516,
+      "offset_amp": -168.42
+     },
+     {
+      "onset_time": 35.84,
+      "onset_amp": -121.94,
+      "offset_time": 36.416,
+      "offset_amp": -75.74
+     },
+     {
+      "onset_time": 37.34,
+      "onset_amp": -35.88,
+      "offset_time": 38.316,
+      "offset_amp": 50.64
+     },
+     {
+      "onset_time": 39.264,
+      "onset_amp": 69.25,
+      "offset_time": 39.74,
+      "offset_amp": 141.74
+     },
+     {
+      "onset_time": 43.848,
+      "onset_amp": 155.81,
+      "offset_time": 44.212,
+      "offset_amp": 25.4
+     },
+     {
+      "onset_time": 48.976,
+      "onset_amp": 30.65,
+      "offset_time": 49.588,
+      "offset_amp": 148.12
+     },
+     {
+      "onset_time": 53.7,
+      "onset_amp": 68.89,
+      "offset_time": 54.536,
+      "offset_amp": 3.44
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 8.468,
+      "onset_amp": 32.81,
+      "offset_time": 9.24,
+      "offset_amp": 82.52
+     },
+     {
+      "onset_time": 13.34,
+      "onset_amp": 61.54,
+      "offset_time": 13.524,
+      "offset_amp": 44.51
+     },
+     {
+      "onset_time": 18.676,
+      "onset_amp": -13.67,
+      "offset_time": 18.84,
+      "offset_amp": -4.31
+     },
+     {
+      "onset_time": 23.7,
+      "onset_amp": -58.09,
+      "offset_time": 24.152,
+      "offset_amp": -98.1
+     },
+     {
+      "onset_time": 28.696,
+      "onset_amp": -148.88,
+      "offset_time": 29.18,
+      "offset_amp": -126.79
+     },
+     {
+      "onset_time": 33.888,
+      "onset_amp": -198.04,
+      "offset_time": 34.1,
+      "offset_amp": -244.15
+     },
+     {
+      "onset_time": 35.844,
+      "onset_amp": -179.03,
+      "offset_time": 36.144,
+      "offset_amp": -155.58
+     },
+     {
+      "onset_time": 37.352,
+      "onset_amp": -143.92,
+      "offset_time": 38.3,
+      "offset_amp": -61.11
+     },
+     {
+      "onset_time": 39.224,
+      "onset_amp": -25.44,
+      "offset_time": 39.76,
+      "offset_amp": 60.8
+     },
+     {
+      "onset_time": 43.796,
+      "onset_amp": 118.01,
+      "offset_time": 44.404,
+      "offset_amp": 13.54
+     },
+     {
+      "onset_time": 45.32,
+      "onset_amp": 5.73,
+      "offset_time": 45.484,
+      "offset_amp": 26.64
+     },
+     {
+      "onset_time": 49.084,
+      "onset_amp": 39.6,
+      "offset_time": 49.636,
+      "offset_amp": 147.36
+     },
+     {
+      "onset_time": 53.68,
+      "onset_amp": 123.17,
+      "offset_time": 53.768,
+      "offset_amp": 107.36
+     },
+     {
+      "onset_time": 54.208,
+      "onset_amp": 85.72,
+      "offset_time": 54.6,
+      "offset_amp": 48.72
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 9.008,
+      "onset_amp": -61.31,
+      "offset_time": 9.172,
+      "offset_amp": -0.94
+     },
+     {
+      "onset_time": 9.588,
+      "onset_amp": 8.4,
+      "offset_time": 9.712,
+      "offset_amp": 28.66
+     },
+     {
+      "onset_time": 13.432,
+      "onset_amp": 84.64,
+      "offset_time": 13.764,
+      "offset_amp": 58.72
+     },
+     {
+      "onset_time": 18.616,
+      "onset_amp": 25.29,
+      "offset_time": 18.84,
+      "offset_amp": 40.97
+     },
+     {
+      "onset_time": 23.696,
+      "onset_amp": -5.45,
+      "offset_time": 24.136,
+      "offset_amp": -70.18
+     },
+     {
+      "onset_time": 28.672,
+      "onset_amp": -128.0,
+      "offset_time": 29.428,
+      "offset_amp": -79.07
+     },
+     {
+      "onset_time": 33.88,
+      "onset_amp": -64.76,
+      "offset_time": 34.548,
+      "offset_amp": -165.35
+     },
+     {
+      "onset_time": 39.264,
+      "onset_amp": -29.72,
+      "offset_time": 39.724,
+      "offset_amp": 69.29
+     },
+     {
+      "onset_time": 43.86,
+      "onset_amp": 118.95,
+      "offset_time": 44.224,
+      "offset_amp": -38.15
+     },
+     {
+      "onset_time": 49.116,
+      "onset_amp": -38.78,
+      "offset_time": 49.54,
+      "offset_amp": 123.96
+     },
+     {
+      "onset_time": 53.708,
+      "onset_amp": 78.58,
+      "offset_time": 54.296,
+      "offset_amp": 17.31
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 2.764,
+      "onset_amp": 19.93,
+      "offset_time": 3.78,
+      "offset_amp": -13.31
+     },
+     {
+      "onset_time": 13.38,
+      "onset_amp": 59.84,
+      "offset_time": 13.54,
+      "offset_amp": 43.39
+     },
+     {
+      "onset_time": 18.604,
+      "onset_amp": 10.99,
+      "offset_time": 18.88,
+      "offset_amp": 25.12
+     },
+     {
+      "onset_time": 23.716,
+      "onset_amp": 3.5,
+      "offset_time": 24.228,
+      "offset_amp": -44.08
+     },
+     {
+      "onset_time": 28.736,
+      "onset_amp": -44.6,
+      "offset_time": 29.124,
+      "offset_amp": -9.62
+     },
+     {
+      "onset_time": 33.864,
+      "onset_amp": 11.53,
+      "offset_time": 34.104,
+      "offset_amp": -105.87
+     },
+     {
+      "onset_time": 39.26,
+      "onset_amp": -33.07,
+      "offset_time": 39.796,
+      "offset_amp": 75.37
+     },
+     {
+      "onset_time": 43.924,
+      "onset_amp": 114.48,
+      "offset_time": 44.288,
+      "offset_amp": -47.74
+     },
+     {
+      "onset_time": 44.688,
+      "onset_amp": -34.13,
+      "offset_time": 44.788,
+      "offset_amp": -45.44
+     },
+     {
+      "onset_time": 49.148,
+      "onset_amp": -109.47,
+      "offset_time": 49.668,
+      "offset_amp": 65.0
+     },
+     {
+      "onset_time": 53.708,
+      "onset_amp": 86.15,
+      "offset_time": 54.272,
+      "offset_amp": -2.43
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 13.368,
+      "onset_amp": 15.16,
+      "offset_time": 13.52,
+      "offset_amp": 1.97
+     },
+     {
+      "onset_time": 18.688,
+      "onset_amp": -4.07,
+      "offset_time": 18.86,
+      "offset_amp": 5.08
+     },
+     {
+      "onset_time": 23.716,
+      "onset_amp": -15.26,
+      "offset_time": 24.092,
+      "offset_amp": -47.39
+     },
+     {
+      "onset_time": 28.644,
+      "onset_amp": -54.16,
+      "offset_time": 29.412,
+      "offset_amp": -13.63
+     },
+     {
+      "onset_time": 33.736,
+      "onset_amp": -33.57,
+      "offset_time": 34.456,
+      "offset_amp": -101.86
+     },
+     {
+      "onset_time": 37.8,
+      "onset_amp": -48.66,
+      "offset_time": 37.92,
+      "offset_amp": -36.7
+     },
+     {
+      "onset_time": 39.232,
+      "onset_amp": 12.83,
+      "offset_time": 39.78,
+      "offset_amp": 73.33
+     },
+     {
+      "onset_time": 43.812,
+      "onset_amp": 90.17,
+      "offset_time": 44.2,
+      "offset_amp": -16.41
+     },
+     {
+      "onset_time": 48.98,
+      "onset_amp": -18.33,
+      "offset_time": 49.588,
+      "offset_amp": 91.47
+     },
+     {
+      "onset_time": 53.7,
+      "onset_amp": 47.97,
+      "offset_time": 54.52,
+      "offset_amp": -20.57
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 13.436,
+      "onset_amp": 35.73,
+      "offset_time": 13.744,
+      "offset_amp": 14.02
+     },
+     {
+      "onset_time": 18.652,
+      "onset_amp": -12.78,
+      "offset_time": 18.86,
+      "offset_amp": 6.43
+     },
+     {
+      "onset_time": 23.708,
+      "onset_amp": -11.88,
+      "offset_time": 24.096,
+      "offset_amp": -49.69
+     },
+     {
+      "onset_time": 29.004,
+      "onset_amp": -77.81,
+      "offset_time": 29.428,
+      "offset_amp": -60.71
+     },
+     {
+      "onset_time": 33.86,
+      "onset_amp": -62.54,
+      "offset_time": 33.984,
+      "offset_amp": -119.49
+     },
+     {
+      "onset_time": 38.248,
+      "onset_amp": -1.94,
+      "offset_time": 38.376,
+      "offset_amp": 8.16
+     },
+     {
+      "onset_time": 39.272,
+      "onset_amp": 24.48,
+      "offset_time": 39.712,
+      "offset_amp": 67.66
+     },
+     {
+      "onset_time": 43.772,
+      "onset_amp": 88.63,
+      "offset_time": 44.22,
+      "offset_amp": -7.14
+     },
+     {
+      "onset_time": 48.996,
+      "onset_amp": 13.76,
+      "offset_time": 49.644,
+      "offset_amp": 108.27
+     },
+     {
+      "onset_time": 53.724,
+      "onset_amp": 55.97,
+      "offset_time": 54.28,
+      "offset_amp": 5.42
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 13.38,
+      "onset_amp": 31.16,
+      "offset_time": 13.748,
+      "offset_amp": 6.98
+     },
+     {
+      "onset_time": 18.636,
+      "onset_amp": 8.75,
+      "offset_time": 18.844,
+      "offset_amp": 25.1
+     },
+     {
+      "onset_time": 23.7,
+      "onset_amp": -10.48,
+      "offset_time": 24.068,
+      "offset_amp": -54.01
+     },
+     {
+      "onset_time": 28.716,
+      "onset_amp": -78.6,
+      "offset_time": 29.408,
+      "offset_amp": -50.84
+     },
+     {
+      "onset_time": 33.744,
+      "onset_amp": -61.61,
+      "offset_time": 34.504,
+      "offset_amp": -126.61
+     },
+     {
+      "onset_time": 39.192,
+      "onset_amp": -43.34,
+      "offset_time": 39.784,
+      "offset_amp": 16.16
+     },
+     {
+      "onset_time": 43.796,
+      "onset_amp": 61.38,
+      "offset_time": 44.268,
+      "offset_amp": -62.01
+     },
+     {
+      "onset_time": 48.956,
+      "onset_amp": 11.82,
+      "offset_time": 49.58,
+      "offset_amp": 122.47
+     },
+     {
+      "onset_time": 53.7,
+      "onset_amp": 86.62,
+      "offset_time": 54.244,
+      "offset_amp": 24.28
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 13.36,
+      "onset_amp": 22.4,
+      "offset_time": 13.524,
+      "offset_amp": 4.78
+     },
+     {
+      "onset_time": 23.708,
+      "onset_amp": -7.15,
+      "offset_time": 24.056,
+      "offset_amp": -33.99
+     },
+     {
+      "onset_time": 28.676,
+      "onset_amp": -48.88,
+      "offset_time": 28.892,
+      "offset_amp": -37.82
+     },
+     {
+      "onset_time": 33.672,
+      "onset_amp": 2.72,
+      "offset_time": 34.488,
+      "offset_amp": -27.23
+     },
+     {
+      "onset_time": 39.316,
+      "onset_amp": 60.71,
+      "offset_time": 40.104,
+      "offset_amp": 100.67
+     },
+     {
+      "onset_time": 43.896,
+      "onset_amp": 73.18,
+      "offset_time": 44.336,
+      "offset_amp": 0.71
+     },
+     {
+      "onset_time": 48.916,
+      "onset_amp": 1.17,
+      "offset_time": 49.6,
+      "offset_amp": 52.48
+     },
+     {
+      "onset_time": 53.736,
+      "onset_amp": 3.79,
+      "offset_time": 54.524,
+      "offset_amp": -45.08
+     }
+    ]
+   }
+  }
+ },
+ "(02.12_10)안찬우_2": {
+  "f5": {
+   "auto_offset": -0.392,
+   "residual": 0.04,
+   "corrected_offset": -0.352,
+   "method": "grf-edge-align (9/10, med=+0.03s)",
+   "anchors": [
+    14.272,
+    18.652,
+    24.736,
+    29.116,
+    34.032,
+    39.16,
+    44.4879,
+    48.936
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 2.36,
+      "onset_amp": -360.7,
+      "offset_time": 4.304,
+      "offset_amp": -205.39
+     },
+     {
+      "onset_time": 5.58,
+      "onset_amp": -168.96,
+      "offset_time": 6.344,
+      "offset_amp": -121.07
+     },
+     {
+      "onset_time": 6.988,
+      "onset_amp": -107.55,
+      "offset_time": 7.128,
+      "offset_amp": -93.15
+     },
+     {
+      "onset_time": 8.816,
+      "onset_amp": -75.47,
+      "offset_time": 9.484,
+      "offset_amp": 56.34
+     },
+     {
+      "onset_time": 14.296,
+      "onset_amp": 82.43,
+      "offset_time": 15.576,
+      "offset_amp": 190.88
+     },
+     {
+      "onset_time": 18.516,
+      "onset_amp": 224.71,
+      "offset_time": 18.972,
+      "offset_amp": 248.28
+     },
+     {
+      "onset_time": 24.52,
+      "onset_amp": 139.08,
+      "offset_time": 25.252,
+      "offset_amp": 49.84
+     },
+     {
+      "onset_time": 29.16,
+      "onset_amp": 34.05,
+      "offset_time": 29.348,
+      "offset_amp": 104.75
+     },
+     {
+      "onset_time": 33.98,
+      "onset_amp": 83.16,
+      "offset_time": 34.388,
+      "offset_amp": -1.22
+     },
+     {
+      "onset_time": 39.132,
+      "onset_amp": -54.0,
+      "offset_time": 39.628,
+      "offset_amp": 39.14
+     },
+     {
+      "onset_time": 44.512,
+      "onset_amp": 13.53,
+      "offset_time": 45.02,
+      "offset_amp": -112.4
+     },
+     {
+      "onset_time": 48.784,
+      "onset_amp": -130.64,
+      "offset_time": 49.372,
+      "offset_amp": 21.32
+     },
+     {
+      "onset_time": 54.344,
+      "onset_amp": -39.41,
+      "offset_time": 54.928,
+      "offset_amp": -140.03
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 0.528,
+      "onset_amp": -386.61,
+      "offset_time": 0.796,
+      "offset_amp": -351.28
+     },
+     {
+      "onset_time": 2.244,
+      "onset_amp": -307.72,
+      "offset_time": 4.716,
+      "offset_amp": -187.98
+     },
+     {
+      "onset_time": 6.996,
+      "onset_amp": -149.43,
+      "offset_time": 7.108,
+      "offset_amp": -135.24
+     },
+     {
+      "onset_time": 8.768,
+      "onset_amp": -172.25,
+      "offset_time": 9.512,
+      "offset_amp": 115.22
+     },
+     {
+      "onset_time": 18.776,
+      "onset_amp": 267.49,
+      "offset_time": 18.944,
+      "offset_amp": 291.49
+     },
+     {
+      "onset_time": 24.516,
+      "onset_amp": 135.53,
+      "offset_time": 25.512,
+      "offset_amp": 6.46
+     },
+     {
+      "onset_time": 29.216,
+      "onset_amp": -8.94,
+      "offset_time": 29.4,
+      "offset_amp": 78.74
+     },
+     {
+      "onset_time": 34.08,
+      "onset_amp": 60.26,
+      "offset_time": 34.828,
+      "offset_amp": -121.77
+     },
+     {
+      "onset_time": 38.512,
+      "onset_amp": -142.3,
+      "offset_time": 39.66,
+      "offset_amp": 22.19
+     },
+     {
+      "onset_time": 39.056,
+      "onset_amp": -166.87,
+      "offset_time": 39.624,
+      "offset_amp": 16.88
+     },
+     {
+      "onset_time": 44.552,
+      "onset_amp": 9.64,
+      "offset_time": 45.02,
+      "offset_amp": -221.67
+     },
+     {
+      "onset_time": 47.66,
+      "onset_amp": -232.0,
+      "offset_time": 48.016,
+      "offset_amp": -209.33
+     },
+     {
+      "onset_time": 48.932,
+      "onset_amp": -164.09,
+      "offset_time": 49.424,
+      "offset_amp": 84.66
+     },
+     {
+      "onset_time": 54.416,
+      "onset_amp": 50.51,
+      "offset_time": 54.928,
+      "offset_amp": -105.54
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 2.276,
+      "onset_amp": 127.97,
+      "offset_time": 4.36,
+      "offset_amp": 65.69
+     },
+     {
+      "onset_time": 6.496,
+      "onset_amp": 0.76,
+      "offset_time": 6.6,
+      "offset_amp": -10.66
+     },
+     {
+      "onset_time": 8.688,
+      "onset_amp": -72.24,
+      "offset_time": 9.76,
+      "offset_amp": 22.28
+     },
+     {
+      "onset_time": 14.376,
+      "onset_amp": 21.65,
+      "offset_time": 14.564,
+      "offset_amp": -13.04
+     },
+     {
+      "onset_time": 18.6,
+      "onset_amp": 43.55,
+      "offset_time": 18.944,
+      "offset_amp": 119.35
+     },
+     {
+      "onset_time": 24.552,
+      "onset_amp": 20.75,
+      "offset_time": 25.576,
+      "offset_amp": -194.79
+     },
+     {
+      "onset_time": 29.096,
+      "onset_amp": -128.49,
+      "offset_time": 29.396,
+      "offset_amp": 23.13
+     },
+     {
+      "onset_time": 34.032,
+      "onset_amp": 9.26,
+      "offset_time": 35.004,
+      "offset_amp": -261.72
+     },
+     {
+      "onset_time": 38.892,
+      "onset_amp": -287.78,
+      "offset_time": 39.476,
+      "offset_amp": -4.81
+     },
+     {
+      "onset_time": 44.556,
+      "onset_amp": 73.63,
+      "offset_time": 44.94,
+      "offset_amp": -300.16
+     },
+     {
+      "onset_time": 47.9,
+      "onset_amp": -313.35,
+      "offset_time": 48.024,
+      "offset_amp": -294.2
+     },
+     {
+      "onset_time": 49.008,
+      "onset_amp": -223.0,
+      "offset_time": 49.396,
+      "offset_amp": 226.44
+     },
+     {
+      "onset_time": 54.064,
+      "onset_amp": 268.31,
+      "offset_time": 55.212,
+      "offset_amp": 20.15
+     },
+     {
+      "onset_time": 55.536,
+      "onset_amp": 47.35,
+      "offset_time": 55.676,
+      "offset_amp": 69.04
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 3.524,
+      "onset_amp": -181.63,
+      "offset_time": 3.648,
+      "offset_amp": -154.5
+     },
+     {
+      "onset_time": 8.792,
+      "onset_amp": -269.74,
+      "offset_time": 9.588,
+      "offset_amp": -303.39
+     },
+     {
+      "onset_time": 10.096,
+      "onset_amp": -268.48,
+      "offset_time": 11.948,
+      "offset_amp": 14.42
+     },
+     {
+      "onset_time": 12.756,
+      "onset_amp": 89.16,
+      "offset_time": 12.88,
+      "offset_amp": 104.06
+     },
+     {
+      "onset_time": 18.72,
+      "onset_amp": 191.43,
+      "offset_time": 18.944,
+      "offset_amp": 229.83
+     },
+     {
+      "onset_time": 24.528,
+      "onset_amp": 91.76,
+      "offset_time": 25.564,
+      "offset_amp": -50.43
+     },
+     {
+      "onset_time": 29.16,
+      "onset_amp": -60.32,
+      "offset_time": 29.332,
+      "offset_amp": 17.66
+     },
+     {
+      "onset_time": 33.972,
+      "onset_amp": 24.7,
+      "offset_time": 34.444,
+      "offset_amp": -114.87
+     },
+     {
+      "onset_time": 38.924,
+      "onset_amp": -212.72,
+      "offset_time": 39.592,
+      "offset_amp": -82.15
+     },
+     {
+      "onset_time": 44.5,
+      "onset_amp": 28.3,
+      "offset_time": 44.94,
+      "offset_amp": -143.55
+     },
+     {
+      "onset_time": 49.064,
+      "onset_amp": -108.11,
+      "offset_time": 49.724,
+      "offset_amp": 113.26
+     },
+     {
+      "onset_time": 54.396,
+      "onset_amp": 112.79,
+      "offset_time": 54.796,
+      "offset_amp": -3.84
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 2.696,
+      "onset_amp": -474.6,
+      "offset_time": 4.276,
+      "offset_amp": -280.95
+     },
+     {
+      "onset_time": 9.344,
+      "onset_amp": -89.11,
+      "offset_time": 9.824,
+      "offset_amp": -56.28
+     },
+     {
+      "onset_time": 10.256,
+      "onset_amp": -30.27,
+      "offset_time": 11.056,
+      "offset_amp": 75.79
+     },
+     {
+      "onset_time": 18.66,
+      "onset_amp": 306.22,
+      "offset_time": 18.76,
+      "offset_amp": 320.89
+     },
+     {
+      "onset_time": 24.528,
+      "onset_amp": 204.79,
+      "offset_time": 25.024,
+      "offset_amp": 119.08
+     },
+     {
+      "onset_time": 29.168,
+      "onset_amp": 36.88,
+      "offset_time": 29.508,
+      "offset_amp": 94.53
+     },
+     {
+      "onset_time": 29.82,
+      "onset_amp": 82.85,
+      "offset_time": 29.904,
+      "offset_amp": 74.91
+     },
+     {
+      "onset_time": 34.068,
+      "onset_amp": 81.27,
+      "offset_time": 34.328,
+      "offset_amp": 36.95
+     },
+     {
+      "onset_time": 39.352,
+      "onset_amp": -44.7,
+      "offset_time": 39.556,
+      "offset_amp": 10.26
+     },
+     {
+      "onset_time": 44.496,
+      "onset_amp": 16.03,
+      "offset_time": 45.016,
+      "offset_amp": -65.64
+     },
+     {
+      "onset_time": 49.056,
+      "onset_amp": -76.74,
+      "offset_time": 49.324,
+      "offset_amp": -9.84
+     },
+     {
+      "onset_time": 54.42,
+      "onset_amp": -51.57,
+      "offset_time": 54.98,
+      "offset_amp": -142.49
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 14.264,
+      "onset_amp": -51.34,
+      "offset_time": 15.616,
+      "offset_amp": 66.84
+     },
+     {
+      "onset_time": 18.536,
+      "onset_amp": 135.53,
+      "offset_time": 18.784,
+      "offset_amp": 144.05
+     },
+     {
+      "onset_time": 24.484,
+      "onset_amp": 20.89,
+      "offset_time": 24.628,
+      "offset_amp": -1.51
+     },
+     {
+      "onset_time": 24.976,
+      "onset_amp": -11.47,
+      "offset_time": 25.212,
+      "offset_amp": -43.59
+     },
+     {
+      "onset_time": 28.808,
+      "onset_amp": 9.55,
+      "offset_time": 29.408,
+      "offset_amp": 55.69
+     },
+     {
+      "onset_time": 34.216,
+      "onset_amp": 10.53,
+      "offset_time": 34.428,
+      "offset_amp": -8.98
+     },
+     {
+      "onset_time": 39.248,
+      "onset_amp": -11.33,
+      "offset_time": 39.636,
+      "offset_amp": 6.27
+     },
+     {
+      "onset_time": 44.516,
+      "onset_amp": 9.45,
+      "offset_time": 45.056,
+      "offset_amp": -17.27
+     },
+     {
+      "onset_time": 47.524,
+      "onset_amp": -29.82,
+      "offset_time": 47.728,
+      "offset_amp": -8.79
+     },
+     {
+      "onset_time": 49.152,
+      "onset_amp": 3.52,
+      "offset_time": 49.54,
+      "offset_amp": 85.55
+     },
+     {
+      "onset_time": 54.32,
+      "onset_amp": -18.64,
+      "offset_time": 54.924,
+      "offset_amp": -75.53
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 18.552,
+      "onset_amp": 32.39,
+      "offset_time": 18.976,
+      "offset_amp": 55.95
+     },
+     {
+      "onset_time": 24.916,
+      "onset_amp": -73.87,
+      "offset_time": 25.1,
+      "offset_amp": -113.45
+     },
+     {
+      "onset_time": 28.6,
+      "onset_amp": -64.97,
+      "offset_time": 28.768,
+      "offset_amp": -50.5
+     },
+     {
+      "onset_time": 29.196,
+      "onset_amp": -45.99,
+      "offset_time": 29.368,
+      "offset_amp": -32.06
+     },
+     {
+      "onset_time": 34.22,
+      "onset_amp": -24.87,
+      "offset_time": 34.412,
+      "offset_amp": -34.58
+     },
+     {
+      "onset_time": 39.444,
+      "onset_amp": -40.15,
+      "offset_time": 39.704,
+      "offset_amp": -2.79
+     },
+     {
+      "onset_time": 44.5,
+      "onset_amp": 23.44,
+      "offset_time": 44.66,
+      "offset_amp": 1.77
+     },
+     {
+      "onset_time": 47.52,
+      "onset_amp": 6.65,
+      "offset_time": 47.704,
+      "offset_amp": 25.06
+     },
+     {
+      "onset_time": 49.236,
+      "onset_amp": 35.74,
+      "offset_time": 49.492,
+      "offset_amp": 91.16
+     },
+     {
+      "onset_time": 53.972,
+      "onset_amp": 37.7,
+      "offset_time": 54.908,
+      "offset_amp": 1.31
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 10.236,
+      "onset_amp": -433.38,
+      "offset_time": 14.416,
+      "offset_amp": 413.79
+     },
+     {
+      "onset_time": 18.592,
+      "onset_amp": 536.24,
+      "offset_time": 18.836,
+      "offset_amp": 547.0
+     },
+     {
+      "onset_time": 24.484,
+      "onset_amp": 333.87,
+      "offset_time": 24.584,
+      "offset_amp": 313.91
+     },
+     {
+      "onset_time": 24.896,
+      "onset_amp": 289.15,
+      "offset_time": 25.096,
+      "offset_amp": 241.3
+     },
+     {
+      "onset_time": 29.184,
+      "onset_amp": 212.9,
+      "offset_time": 29.372,
+      "offset_amp": 241.29
+     },
+     {
+      "onset_time": 35.48,
+      "onset_amp": 104.52,
+      "offset_time": 35.58,
+      "offset_amp": 79.66
+     },
+     {
+      "onset_time": 39.392,
+      "onset_amp": -35.72,
+      "offset_time": 39.648,
+      "offset_amp": 0.49
+     },
+     {
+      "onset_time": 44.232,
+      "onset_amp": 22.43,
+      "offset_time": 44.648,
+      "offset_amp": -8.89
+     },
+     {
+      "onset_time": 46.304,
+      "onset_amp": -59.57,
+      "offset_time": 46.408,
+      "offset_amp": -73.84
+     },
+     {
+      "onset_time": 49.256,
+      "onset_amp": -140.62,
+      "offset_time": 49.44,
+      "offset_amp": -103.8
+     },
+     {
+      "onset_time": 54.372,
+      "onset_amp": -197.2,
+      "offset_time": 54.86,
+      "offset_amp": -260.36
+     }
+    ]
+   }
+  }
+ },
+ "(02.25_17)이영채_1": {
+  "s2": {
+   "auto_offset": 0.056,
+   "residual": -0.36,
+   "corrected_offset": -0.304,
+   "method": "grf-edge-align (6/10, med=+0.08s)",
+   "anchors": [
+    15.1079,
+    19.492,
+    24.96,
+    29.5519,
+    35.1039,
+    40.0839,
+    44.848,
+    50.172
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 1.796,
+      "onset_amp": -231.82,
+      "offset_time": 3.628,
+      "offset_amp": -74.32
+     },
+     {
+      "onset_time": 9.508,
+      "onset_amp": -20.67,
+      "offset_time": 10.668,
+      "offset_amp": 90.72
+     },
+     {
+      "onset_time": 15.016,
+      "onset_amp": -11.86,
+      "offset_time": 15.244,
+      "offset_amp": 42.22
+     },
+     {
+      "onset_time": 15.656,
+      "onset_amp": 67.75,
+      "offset_time": 15.788,
+      "offset_amp": 26.93
+     },
+     {
+      "onset_time": 20.828,
+      "onset_amp": 40.44,
+      "offset_time": 21.004,
+      "offset_amp": 66.91
+     },
+     {
+      "onset_time": 25.312,
+      "onset_amp": 141.62,
+      "offset_time": 25.788,
+      "offset_amp": 54.38
+     },
+     {
+      "onset_time": 29.9,
+      "onset_amp": 31.26,
+      "offset_time": 30.532,
+      "offset_amp": 124.19
+     },
+     {
+      "onset_time": 30.972,
+      "onset_amp": 124.91,
+      "offset_time": 31.052,
+      "offset_amp": 110.69
+     },
+     {
+      "onset_time": 35.04,
+      "onset_amp": 110.49,
+      "offset_time": 35.84,
+      "offset_amp": 40.0
+     },
+     {
+      "onset_time": 40.744,
+      "onset_amp": 31.29,
+      "offset_time": 41.356,
+      "offset_amp": 115.29
+     },
+     {
+      "onset_time": 44.832,
+      "onset_amp": 83.02,
+      "offset_time": 45.964,
+      "offset_amp": -103.51
+     },
+     {
+      "onset_time": 50.04,
+      "onset_amp": -93.5,
+      "offset_time": 51.096,
+      "offset_amp": 9.1
+     },
+     {
+      "onset_time": 51.568,
+      "onset_amp": 12.56,
+      "offset_time": 51.808,
+      "offset_amp": -29.87
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 1.712,
+      "onset_amp": -375.58,
+      "offset_time": 3.188,
+      "offset_amp": -217.04
+     },
+     {
+      "onset_time": 9.536,
+      "onset_amp": -77.42,
+      "offset_time": 10.62,
+      "offset_amp": 50.07
+     },
+     {
+      "onset_time": 15.312,
+      "onset_amp": 79.88,
+      "offset_time": 15.496,
+      "offset_amp": 35.95
+     },
+     {
+      "onset_time": 19.536,
+      "onset_amp": 96.42,
+      "offset_time": 19.612,
+      "offset_amp": 109.59
+     },
+     {
+      "onset_time": 24.848,
+      "onset_amp": 215.26,
+      "offset_time": 25.456,
+      "offset_amp": 73.65
+     },
+     {
+      "onset_time": 29.492,
+      "onset_amp": 111.48,
+      "offset_time": 29.952,
+      "offset_amp": 182.16
+     },
+     {
+      "onset_time": 35.26,
+      "onset_amp": 183.56,
+      "offset_time": 36.812,
+      "offset_amp": -23.01
+     },
+     {
+      "onset_time": 39.884,
+      "onset_amp": 10.82,
+      "offset_time": 41.048,
+      "offset_amp": 183.51
+     },
+     {
+      "onset_time": 45.0,
+      "onset_amp": 103.39,
+      "offset_time": 45.94,
+      "offset_amp": -242.82
+     },
+     {
+      "onset_time": 50.084,
+      "onset_amp": -227.2,
+      "offset_time": 50.996,
+      "offset_amp": -0.39
+     },
+     {
+      "onset_time": 54.744,
+      "onset_amp": -42.91,
+      "offset_time": 54.796,
+      "offset_amp": -52.53
+     },
+     {
+      "onset_time": 55.628,
+      "onset_amp": -55.56,
+      "offset_time": 56.04,
+      "offset_amp": -170.68
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 2.088,
+      "onset_amp": -892.47,
+      "offset_time": 5.048,
+      "offset_amp": -46.44
+     },
+     {
+      "onset_time": 10.092,
+      "onset_amp": 201.87,
+      "offset_time": 10.628,
+      "offset_amp": 271.08
+     },
+     {
+      "onset_time": 15.16,
+      "onset_amp": 205.96,
+      "offset_time": 15.44,
+      "offset_amp": 125.2
+     },
+     {
+      "onset_time": 19.968,
+      "onset_amp": 187.93,
+      "offset_time": 20.172,
+      "offset_amp": 202.04
+     },
+     {
+      "onset_time": 24.748,
+      "onset_amp": 137.64,
+      "offset_time": 25.668,
+      "offset_amp": 46.32
+     },
+     {
+      "onset_time": 26.08,
+      "onset_amp": 60.99,
+      "offset_time": 26.176,
+      "offset_amp": 81.22
+     },
+     {
+      "onset_time": 29.92,
+      "onset_amp": 72.26,
+      "offset_time": 30.392,
+      "offset_amp": 93.69
+     },
+     {
+      "onset_time": 35.216,
+      "onset_amp": 120.42,
+      "offset_time": 36.804,
+      "offset_amp": 2.39
+     },
+     {
+      "onset_time": 40.684,
+      "onset_amp": 85.35,
+      "offset_time": 40.948,
+      "offset_amp": 110.46
+     },
+     {
+      "onset_time": 44.704,
+      "onset_amp": 58.73,
+      "offset_time": 46.144,
+      "offset_amp": -175.75
+     },
+     {
+      "onset_time": 49.956,
+      "onset_amp": -181.93,
+      "offset_time": 50.476,
+      "offset_amp": -78.99
+     },
+     {
+      "onset_time": 55.612,
+      "onset_amp": -102.2,
+      "offset_time": 55.844,
+      "offset_amp": -173.66
+     },
+     {
+      "onset_time": 56.272,
+      "onset_amp": -171.67,
+      "offset_time": 56.336,
+      "offset_amp": -156.51
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 3.492,
+      "onset_amp": -82.48,
+      "offset_time": 3.604,
+      "offset_amp": -61.67
+     },
+     {
+      "onset_time": 15.208,
+      "onset_amp": -85.32,
+      "offset_time": 15.388,
+      "offset_amp": -139.51
+     },
+     {
+      "onset_time": 19.448,
+      "onset_amp": -46.07,
+      "offset_time": 19.732,
+      "offset_amp": -18.19
+     },
+     {
+      "onset_time": 25.02,
+      "onset_amp": 101.18,
+      "offset_time": 25.236,
+      "offset_amp": 28.62
+     },
+     {
+      "onset_time": 30.04,
+      "onset_amp": 166.17,
+      "offset_time": 30.18,
+      "offset_amp": 102.16
+     },
+     {
+      "onset_time": 30.848,
+      "onset_amp": 97.4,
+      "offset_time": 31.056,
+      "offset_amp": 118.57
+     },
+     {
+      "onset_time": 36.06,
+      "onset_amp": 133.41,
+      "offset_time": 36.24,
+      "offset_amp": 92.29
+     },
+     {
+      "onset_time": 40.152,
+      "onset_amp": 114.63,
+      "offset_time": 40.168,
+      "offset_amp": 111.34
+     },
+     {
+      "onset_time": 40.828,
+      "onset_amp": 38.57,
+      "offset_time": 40.98,
+      "offset_amp": 81.79
+     },
+     {
+      "onset_time": 44.796,
+      "onset_amp": 18.92,
+      "offset_time": 44.88,
+      "offset_amp": -1.19
+     },
+     {
+      "onset_time": 45.428,
+      "onset_amp": -2.59,
+      "offset_time": 46.264,
+      "offset_amp": -44.69
+     },
+     {
+      "onset_time": 50.892,
+      "onset_amp": -70.74,
+      "offset_time": 51.072,
+      "offset_amp": -51.92
+     },
+     {
+      "onset_time": 55.536,
+      "onset_amp": -130.49,
+      "offset_time": 56.06,
+      "offset_amp": -154.05
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 9.504,
+      "onset_amp": -77.98,
+      "offset_time": 10.664,
+      "offset_amp": -13.06
+     },
+     {
+      "onset_time": 15.14,
+      "onset_amp": -79.46,
+      "offset_time": 15.824,
+      "offset_amp": -119.79
+     },
+     {
+      "onset_time": 19.54,
+      "onset_amp": -29.48,
+      "offset_time": 19.724,
+      "offset_amp": 3.6
+     },
+     {
+      "onset_time": 25.38,
+      "onset_amp": 149.28,
+      "offset_time": 25.556,
+      "offset_amp": 103.04
+     },
+     {
+      "onset_time": 30.128,
+      "onset_amp": 66.56,
+      "offset_time": 30.576,
+      "offset_amp": 126.36
+     },
+     {
+      "onset_time": 35.828,
+      "onset_amp": 181.53,
+      "offset_time": 36.064,
+      "offset_amp": 63.2
+     },
+     {
+      "onset_time": 40.008,
+      "onset_amp": 119.24,
+      "offset_time": 40.288,
+      "offset_amp": 66.87
+     },
+     {
+      "onset_time": 40.796,
+      "onset_amp": 53.27,
+      "offset_time": 41.536,
+      "offset_amp": 99.95
+     },
+     {
+      "onset_time": 44.92,
+      "onset_amp": 63.52,
+      "offset_time": 46.204,
+      "offset_amp": 9.3
+     },
+     {
+      "onset_time": 50.228,
+      "onset_amp": -25.47,
+      "offset_time": 52.088,
+      "offset_amp": -83.94
+     },
+     {
+      "onset_time": 50.864,
+      "onset_amp": -109.01,
+      "offset_time": 51.08,
+      "offset_amp": -44.5
+     },
+     {
+      "onset_time": 55.668,
+      "onset_amp": -123.91,
+      "offset_time": 56.464,
+      "offset_amp": -161.73
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 1.844,
+      "onset_amp": -146.27,
+      "offset_time": 3.664,
+      "offset_amp": -104.55
+     },
+     {
+      "onset_time": 15.108,
+      "onset_amp": -51.38,
+      "offset_time": 15.232,
+      "offset_amp": -24.55
+     },
+     {
+      "onset_time": 15.616,
+      "onset_amp": -19.49,
+      "offset_time": 15.8,
+      "offset_amp": -53.91
+     },
+     {
+      "onset_time": 20.232,
+      "onset_amp": 37.71,
+      "offset_time": 20.392,
+      "offset_amp": 50.87
+     },
+     {
+      "onset_time": 24.952,
+      "onset_amp": 100.52,
+      "offset_time": 25.936,
+      "offset_amp": 155.38
+     },
+     {
+      "onset_time": 25.628,
+      "onset_amp": 159.23,
+      "offset_time": 25.796,
+      "offset_amp": 135.74
+     },
+     {
+      "onset_time": 30.112,
+      "onset_amp": 112.56,
+      "offset_time": 30.268,
+      "offset_amp": 132.09
+     },
+     {
+      "onset_time": 34.964,
+      "onset_amp": 88.21,
+      "offset_time": 36.308,
+      "offset_amp": 117.49
+     },
+     {
+      "onset_time": 35.828,
+      "onset_amp": 159.56,
+      "offset_time": 36.068,
+      "offset_amp": 85.72
+     },
+     {
+      "onset_time": 36.772,
+      "onset_amp": 124.94,
+      "offset_time": 36.824,
+      "offset_amp": 134.15
+     },
+     {
+      "onset_time": 40.08,
+      "onset_amp": 127.49,
+      "offset_time": 40.224,
+      "offset_amp": 105.98
+     },
+     {
+      "onset_time": 40.708,
+      "onset_amp": 88.49,
+      "offset_time": 40.96,
+      "offset_amp": 170.75
+     },
+     {
+      "onset_time": 44.656,
+      "onset_amp": 68.57,
+      "offset_time": 46.204,
+      "offset_amp": 14.28
+     },
+     {
+      "onset_time": 50.824,
+      "onset_amp": -102.09,
+      "offset_time": 51.064,
+      "offset_amp": -22.47
+     },
+     {
+      "onset_time": 51.584,
+      "onset_amp": -41.98,
+      "offset_time": 51.9,
+      "offset_amp": -99.76
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 1.84,
+      "onset_amp": -160.19,
+      "offset_time": 3.964,
+      "offset_amp": -90.71
+     },
+     {
+      "onset_time": 10.0,
+      "onset_amp": -65.49,
+      "offset_time": 10.596,
+      "offset_amp": 89.34
+     },
+     {
+      "onset_time": 15.184,
+      "onset_amp": 102.74,
+      "offset_time": 16.06,
+      "offset_amp": -41.06
+     },
+     {
+      "onset_time": 20.844,
+      "onset_amp": -1.48,
+      "offset_time": 21.052,
+      "offset_amp": 21.16
+     },
+     {
+      "onset_time": 24.692,
+      "onset_amp": 58.65,
+      "offset_time": 24.884,
+      "offset_amp": 22.43
+     },
+     {
+      "onset_time": 30.116,
+      "onset_amp": -38.1,
+      "offset_time": 30.32,
+      "offset_amp": 33.43
+     },
+     {
+      "onset_time": 35.84,
+      "onset_amp": 197.58,
+      "offset_time": 36.076,
+      "offset_amp": 95.01
+     },
+     {
+      "onset_time": 40.024,
+      "onset_amp": 110.21,
+      "offset_time": 40.328,
+      "offset_amp": 23.07
+     },
+     {
+      "onset_time": 40.688,
+      "onset_amp": -1.29,
+      "offset_time": 41.516,
+      "offset_amp": 86.8
+     },
+     {
+      "onset_time": 44.368,
+      "onset_amp": 36.94,
+      "offset_time": 44.468,
+      "offset_amp": 9.69
+     },
+     {
+      "onset_time": 44.876,
+      "onset_amp": 8.06,
+      "offset_time": 46.148,
+      "offset_amp": 46.22
+     },
+     {
+      "onset_time": 50.2,
+      "onset_amp": -2.68,
+      "offset_time": 51.084,
+      "offset_amp": -18.76
+     },
+     {
+      "onset_time": 50.808,
+      "onset_amp": -146.05,
+      "offset_time": 51.076,
+      "offset_amp": -30.8
+     },
+     {
+      "onset_time": 51.604,
+      "onset_amp": -29.45,
+      "offset_time": 51.94,
+      "offset_amp": -101.74
+     },
+     {
+      "onset_time": 55.644,
+      "onset_amp": -122.47,
+      "offset_time": 56.42,
+      "offset_amp": -151.33
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 1.7,
+      "onset_amp": -127.07,
+      "offset_time": 3.216,
+      "offset_amp": -63.89
+     },
+     {
+      "onset_time": 9.572,
+      "onset_amp": -157.82,
+      "offset_time": 10.656,
+      "offset_amp": -183.89
+     },
+     {
+      "onset_time": 15.116,
+      "onset_amp": -116.33,
+      "offset_time": 15.516,
+      "offset_amp": -62.12
+     },
+     {
+      "onset_time": 15.6,
+      "onset_amp": -61.36,
+      "offset_time": 15.744,
+      "offset_amp": -72.91
+     },
+     {
+      "onset_time": 19.616,
+      "onset_amp": -1.53,
+      "offset_time": 20.188,
+      "offset_amp": 46.15
+     },
+     {
+      "onset_time": 24.612,
+      "onset_amp": 128.7,
+      "offset_time": 24.808,
+      "offset_amp": 97.02
+     },
+     {
+      "onset_time": 24.684,
+      "onset_amp": 121.91,
+      "offset_time": 25.32,
+      "offset_amp": 234.61
+     },
+     {
+      "onset_time": 30.124,
+      "onset_amp": 173.84,
+      "offset_time": 30.316,
+      "offset_amp": 209.03
+     },
+     {
+      "onset_time": 35.084,
+      "onset_amp": 164.08,
+      "offset_time": 36.236,
+      "offset_amp": 271.34
+     },
+     {
+      "onset_time": 35.852,
+      "onset_amp": 309.74,
+      "offset_time": 36.068,
+      "offset_amp": 249.04
+     },
+     {
+      "onset_time": 40.0,
+      "onset_amp": 266.65,
+      "offset_time": 41.532,
+      "offset_amp": 93.34
+     },
+     {
+      "onset_time": 40.704,
+      "onset_amp": 74.45,
+      "offset_time": 41.016,
+      "offset_amp": 202.54
+     },
+     {
+      "onset_time": 44.124,
+      "onset_amp": 3.59,
+      "offset_time": 44.14,
+      "offset_amp": 0.57
+     },
+     {
+      "onset_time": 44.864,
+      "onset_amp": -9.85,
+      "offset_time": 45.772,
+      "offset_amp": 65.1
+     },
+     {
+      "onset_time": 45.428,
+      "onset_amp": 125.3,
+      "offset_time": 45.636,
+      "offset_amp": 38.15
+     },
+     {
+      "onset_time": 50.204,
+      "onset_amp": -4.14,
+      "offset_time": 51.888,
+      "offset_amp": -170.37
+     },
+     {
+      "onset_time": 50.832,
+      "onset_amp": -158.55,
+      "offset_time": 51.056,
+      "offset_amp": -108.9
+     },
+     {
+      "onset_time": 55.62,
+      "onset_amp": -297.9,
+      "offset_time": 56.148,
+      "offset_amp": -256.57
+     }
+    ]
+   }
+  }
+ },
+ "(03.05_10)김다예_1.5": {
+  "f7": {
+   "auto_offset": -0.3081,
+   "residual": 0.02,
+   "corrected_offset": -0.2881,
+   "method": "grf-edge-align (6/10, med=-0.07s)",
+   "anchors": [
+    14.152,
+    18.9839,
+    24.336,
+    29.02,
+    34.32,
+    39.252,
+    44.172,
+    48.9679
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 1.992,
+      "onset_amp": -122.94,
+      "offset_time": 3.184,
+      "offset_amp": -58.78
+     },
+     {
+      "onset_time": 3.696,
+      "onset_amp": -85.35,
+      "offset_time": 3.82,
+      "offset_amp": -99.89
+     },
+     {
+      "onset_time": 9.024,
+      "onset_amp": -32.96,
+      "offset_time": 9.736,
+      "offset_amp": 31.55
+     },
+     {
+      "onset_time": 13.744,
+      "onset_amp": 74.86,
+      "offset_time": 14.344,
+      "offset_amp": 39.58
+     },
+     {
+      "onset_time": 19.212,
+      "onset_amp": 56.99,
+      "offset_time": 19.292,
+      "offset_amp": 72.5
+     },
+     {
+      "onset_time": 24.472,
+      "onset_amp": 76.1,
+      "offset_time": 25.22,
+      "offset_amp": 14.16
+     },
+     {
+      "onset_time": 28.672,
+      "onset_amp": -10.16,
+      "offset_time": 29.38,
+      "offset_amp": 42.82
+     },
+     {
+      "onset_time": 34.448,
+      "onset_amp": 133.57,
+      "offset_time": 34.764,
+      "offset_amp": 27.35
+     },
+     {
+      "onset_time": 35.132,
+      "onset_amp": 11.29,
+      "offset_time": 35.328,
+      "offset_amp": -28.9
+     },
+     {
+      "onset_time": 38.496,
+      "onset_amp": -84.54,
+      "offset_time": 39.756,
+      "offset_amp": -38.48
+     },
+     {
+      "onset_time": 40.212,
+      "onset_amp": -28.78,
+      "offset_time": 40.276,
+      "offset_amp": -12.32
+     },
+     {
+      "onset_time": 43.936,
+      "onset_amp": 30.98,
+      "offset_time": 45.912,
+      "offset_amp": -23.12
+     },
+     {
+      "onset_time": 48.22,
+      "onset_amp": -37.16,
+      "offset_time": 49.832,
+      "offset_amp": 24.4
+     },
+     {
+      "onset_time": 48.496,
+      "onset_amp": -87.14,
+      "offset_time": 48.704,
+      "offset_amp": -25.68
+     },
+     {
+      "onset_time": 54.484,
+      "onset_amp": 7.1,
+      "offset_time": 54.78,
+      "offset_amp": -37.63
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 9.12,
+      "onset_amp": -19.39,
+      "offset_time": 9.748,
+      "offset_amp": 26.13
+     },
+     {
+      "onset_time": 13.668,
+      "onset_amp": 39.24,
+      "offset_time": 14.076,
+      "offset_amp": 13.68
+     },
+     {
+      "onset_time": 19.172,
+      "onset_amp": 42.35,
+      "offset_time": 19.348,
+      "offset_amp": 58.33
+     },
+     {
+      "onset_time": 24.096,
+      "onset_amp": 34.49,
+      "offset_time": 24.236,
+      "offset_amp": 15.07
+     },
+     {
+      "onset_time": 29.188,
+      "onset_amp": 7.76,
+      "offset_time": 29.396,
+      "offset_amp": 31.85
+     },
+     {
+      "onset_time": 34.468,
+      "onset_amp": 78.09,
+      "offset_time": 35.216,
+      "offset_amp": -45.36
+     },
+     {
+      "onset_time": 38.568,
+      "onset_amp": -63.85,
+      "offset_time": 40.228,
+      "offset_amp": 38.92
+     },
+     {
+      "onset_time": 38.676,
+      "onset_amp": -64.08,
+      "offset_time": 38.996,
+      "offset_amp": -19.84
+     },
+     {
+      "onset_time": 43.532,
+      "onset_amp": 1.83,
+      "offset_time": 43.972,
+      "offset_amp": -28.18
+     },
+     {
+      "onset_time": 44.408,
+      "onset_amp": -36.15,
+      "offset_time": 45.264,
+      "offset_amp": -171.02
+     },
+     {
+      "onset_time": 45.752,
+      "onset_amp": -144.58,
+      "offset_time": 45.876,
+      "offset_amp": -127.11
+     },
+     {
+      "onset_time": 48.328,
+      "onset_amp": -82.52,
+      "offset_time": 49.796,
+      "offset_amp": 51.2
+     },
+     {
+      "onset_time": 48.476,
+      "onset_amp": -106.62,
+      "offset_time": 48.912,
+      "offset_amp": -3.61
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 1.876,
+      "onset_amp": 25.5,
+      "offset_time": 3.644,
+      "offset_amp": 14.31
+     },
+     {
+      "onset_time": 8.804,
+      "onset_amp": -49.56,
+      "offset_time": 9.736,
+      "offset_amp": 36.03
+     },
+     {
+      "onset_time": 13.732,
+      "onset_amp": 28.87,
+      "offset_time": 14.012,
+      "offset_amp": 6.13
+     },
+     {
+      "onset_time": 19.132,
+      "onset_amp": 26.37,
+      "offset_time": 19.308,
+      "offset_amp": 65.93
+     },
+     {
+      "onset_time": 24.748,
+      "onset_amp": -71.3,
+      "offset_time": 25.304,
+      "offset_amp": -126.87
+     },
+     {
+      "onset_time": 28.648,
+      "onset_amp": -123.17,
+      "offset_time": 28.792,
+      "offset_amp": -147.43
+     },
+     {
+      "onset_time": 29.188,
+      "onset_amp": -146.36,
+      "offset_time": 29.476,
+      "offset_amp": -87.09
+     },
+     {
+      "onset_time": 32.176,
+      "onset_amp": -18.83,
+      "offset_time": 32.548,
+      "offset_amp": 43.61
+     },
+     {
+      "onset_time": 34.208,
+      "onset_amp": 76.79,
+      "offset_time": 34.788,
+      "offset_amp": 11.82
+     },
+     {
+      "onset_time": 38.496,
+      "onset_amp": 36.68,
+      "offset_time": 39.96,
+      "offset_amp": 93.18
+     },
+     {
+      "onset_time": 39.436,
+      "onset_amp": -46.77,
+      "offset_time": 39.972,
+      "offset_amp": 93.52
+     },
+     {
+      "onset_time": 43.932,
+      "onset_amp": 62.4,
+      "offset_time": 45.884,
+      "offset_amp": -52.26
+     },
+     {
+      "onset_time": 48.28,
+      "onset_amp": -49.36,
+      "offset_time": 49.804,
+      "offset_amp": 75.68
+     },
+     {
+      "onset_time": 48.496,
+      "onset_amp": -97.54,
+      "offset_time": 48.904,
+      "offset_amp": 27.79
+     },
+     {
+      "onset_time": 54.684,
+      "onset_amp": 30.26,
+      "offset_time": 54.852,
+      "offset_amp": -0.11
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 8.524,
+      "onset_amp": -61.35,
+      "offset_time": 9.472,
+      "offset_amp": 26.7
+     },
+     {
+      "onset_time": 14.28,
+      "onset_amp": -18.61,
+      "offset_time": 14.46,
+      "offset_amp": -35.09
+     },
+     {
+      "onset_time": 18.96,
+      "onset_amp": 28.73,
+      "offset_time": 19.276,
+      "offset_amp": 83.46
+     },
+     {
+      "onset_time": 24.888,
+      "onset_amp": 53.69,
+      "offset_time": 25.32,
+      "offset_amp": 11.18
+     },
+     {
+      "onset_time": 29.1,
+      "onset_amp": -45.01,
+      "offset_time": 29.416,
+      "offset_amp": 30.44
+     },
+     {
+      "onset_time": 34.02,
+      "onset_amp": 46.67,
+      "offset_time": 35.532,
+      "offset_amp": -20.69
+     },
+     {
+      "onset_time": 38.512,
+      "onset_amp": -35.61,
+      "offset_time": 40.084,
+      "offset_amp": 38.01
+     },
+     {
+      "onset_time": 39.46,
+      "onset_amp": -92.08,
+      "offset_time": 39.916,
+      "offset_amp": 42.81
+     },
+     {
+      "onset_time": 44.108,
+      "onset_amp": 32.17,
+      "offset_time": 45.812,
+      "offset_amp": -69.37
+     },
+     {
+      "onset_time": 48.224,
+      "onset_amp": -90.29,
+      "offset_time": 50.06,
+      "offset_amp": 41.82
+     },
+     {
+      "onset_time": 49.308,
+      "onset_amp": -149.88,
+      "offset_time": 49.904,
+      "offset_amp": 46.07
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 2.096,
+      "onset_amp": -89.16,
+      "offset_time": 3.216,
+      "offset_amp": -8.23
+     },
+     {
+      "onset_time": 8.504,
+      "onset_amp": -65.72,
+      "offset_time": 9.032,
+      "offset_amp": -27.1
+     },
+     {
+      "onset_time": 9.448,
+      "onset_amp": -20.45,
+      "offset_time": 9.828,
+      "offset_amp": 4.63
+     },
+     {
+      "onset_time": 13.896,
+      "onset_amp": 28.84,
+      "offset_time": 14.024,
+      "offset_amp": 15.88
+     },
+     {
+      "onset_time": 19.756,
+      "onset_amp": 83.19,
+      "offset_time": 20.016,
+      "offset_amp": 94.86
+     },
+     {
+      "onset_time": 24.664,
+      "onset_amp": 33.08,
+      "offset_time": 24.94,
+      "offset_amp": -5.3
+     },
+     {
+      "onset_time": 28.812,
+      "onset_amp": -11.21,
+      "offset_time": 28.992,
+      "offset_amp": 17.06
+     },
+     {
+      "onset_time": 34.18,
+      "onset_amp": 60.94,
+      "offset_time": 35.256,
+      "offset_amp": 2.8
+     },
+     {
+      "onset_time": 38.504,
+      "onset_amp": -26.29,
+      "offset_time": 39.68,
+      "offset_amp": 5.96
+     },
+     {
+      "onset_time": 39.324,
+      "onset_amp": -68.42,
+      "offset_time": 39.684,
+      "offset_amp": -1.16
+     },
+     {
+      "onset_time": 44.216,
+      "onset_amp": 1.28,
+      "offset_time": 44.528,
+      "offset_amp": -59.52
+     },
+     {
+      "onset_time": 45.196,
+      "onset_amp": -34.17,
+      "offset_time": 45.492,
+      "offset_amp": 8.66
+     },
+     {
+      "onset_time": 49.38,
+      "onset_amp": -83.81,
+      "offset_time": 49.6,
+      "offset_amp": -15.39
+     },
+     {
+      "onset_time": 54.456,
+      "onset_amp": -27.47,
+      "offset_time": 54.496,
+      "offset_amp": -35.45
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 2.168,
+      "onset_amp": -66.72,
+      "offset_time": 3.072,
+      "offset_amp": -25.71
+     },
+     {
+      "onset_time": 9.356,
+      "onset_amp": 58.42,
+      "offset_time": 9.488,
+      "offset_amp": 81.5
+     },
+     {
+      "onset_time": 12.624,
+      "onset_amp": 15.61,
+      "offset_time": 12.916,
+      "offset_amp": -20.47
+     },
+     {
+      "onset_time": 13.78,
+      "onset_amp": -70.43,
+      "offset_time": 13.904,
+      "offset_amp": -82.07
+     },
+     {
+      "onset_time": 19.148,
+      "onset_amp": 52.22,
+      "offset_time": 19.356,
+      "offset_amp": 63.72
+     },
+     {
+      "onset_time": 24.728,
+      "onset_amp": -22.99,
+      "offset_time": 24.9,
+      "offset_amp": -47.25
+     },
+     {
+      "onset_time": 29.496,
+      "onset_amp": 12.44,
+      "offset_time": 29.704,
+      "offset_amp": 27.03
+     },
+     {
+      "onset_time": 34.264,
+      "onset_amp": 109.19,
+      "offset_time": 34.604,
+      "offset_amp": 68.48
+     },
+     {
+      "onset_time": 35.088,
+      "onset_amp": 42.54,
+      "offset_time": 35.372,
+      "offset_amp": 2.39
+     },
+     {
+      "onset_time": 40.144,
+      "onset_amp": -15.67,
+      "offset_time": 40.328,
+      "offset_amp": 2.11
+     },
+     {
+      "onset_time": 44.396,
+      "onset_amp": 22.7,
+      "offset_time": 44.84,
+      "offset_amp": -37.38
+     },
+     {
+      "onset_time": 45.212,
+      "onset_amp": -41.72,
+      "offset_time": 45.36,
+      "offset_amp": -20.09
+     },
+     {
+      "onset_time": 49.456,
+      "onset_amp": 31.88,
+      "offset_time": 49.852,
+      "offset_amp": 74.39
+     },
+     {
+      "onset_time": 53.892,
+      "onset_amp": -41.76,
+      "offset_time": 53.972,
+      "offset_amp": -64.42
+     },
+     {
+      "onset_time": 54.348,
+      "onset_amp": -72.6,
+      "offset_time": 54.468,
+      "offset_amp": -93.03
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 2.068,
+      "onset_amp": -88.53,
+      "offset_time": 3.236,
+      "offset_amp": -41.36
+     },
+     {
+      "onset_time": 8.696,
+      "onset_amp": -96.13,
+      "offset_time": 9.068,
+      "offset_amp": -17.88
+     },
+     {
+      "onset_time": 13.72,
+      "onset_amp": 55.67,
+      "offset_time": 14.312,
+      "offset_amp": 33.39
+     },
+     {
+      "onset_time": 19.148,
+      "onset_amp": 77.63,
+      "offset_time": 19.36,
+      "offset_amp": 97.69
+     },
+     {
+      "onset_time": 24.216,
+      "onset_amp": 98.86,
+      "offset_time": 24.872,
+      "offset_amp": 36.22
+     },
+     {
+      "onset_time": 28.836,
+      "onset_amp": -11.49,
+      "offset_time": 29.128,
+      "offset_amp": 30.48
+     },
+     {
+      "onset_time": 34.248,
+      "onset_amp": 43.87,
+      "offset_time": 35.48,
+      "offset_amp": -17.02
+     },
+     {
+      "onset_time": 39.348,
+      "onset_amp": -96.59,
+      "offset_time": 39.712,
+      "offset_amp": -39.94
+     },
+     {
+      "onset_time": 43.776,
+      "onset_amp": -14.81,
+      "offset_time": 44.784,
+      "offset_amp": -59.97
+     },
+     {
+      "onset_time": 45.244,
+      "onset_amp": -62.73,
+      "offset_time": 45.52,
+      "offset_amp": -32.6
+     },
+     {
+      "onset_time": 48.292,
+      "onset_amp": -20.55,
+      "offset_time": 48.436,
+      "offset_amp": -62.01
+     },
+     {
+      "onset_time": 49.032,
+      "onset_amp": -63.23,
+      "offset_time": 49.692,
+      "offset_amp": 40.44
+     },
+     {
+      "onset_time": 53.952,
+      "onset_amp": 52.37,
+      "offset_time": 54.448,
+      "offset_amp": -2.62
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 8.768,
+      "onset_amp": -68.02,
+      "offset_time": 9.496,
+      "offset_amp": 10.8
+     },
+     {
+      "onset_time": 13.744,
+      "onset_amp": 88.7,
+      "offset_time": 14.164,
+      "offset_amp": 62.75
+     },
+     {
+      "onset_time": 18.76,
+      "onset_amp": 78.18,
+      "offset_time": 19.116,
+      "offset_amp": 98.28
+     },
+     {
+      "onset_time": 24.552,
+      "onset_amp": 105.26,
+      "offset_time": 24.916,
+      "offset_amp": 50.93
+     },
+     {
+      "onset_time": 28.812,
+      "onset_amp": 6.82,
+      "offset_time": 29.22,
+      "offset_amp": 57.82
+     },
+     {
+      "onset_time": 34.252,
+      "onset_amp": 84.7,
+      "offset_time": 35.352,
+      "offset_amp": 46.12
+     },
+     {
+      "onset_time": 38.436,
+      "onset_amp": -7.5,
+      "offset_time": 38.616,
+      "offset_amp": -46.85
+     },
+     {
+      "onset_time": 39.424,
+      "onset_amp": -97.84,
+      "offset_time": 39.992,
+      "offset_amp": -13.27
+     },
+     {
+      "onset_time": 44.148,
+      "onset_amp": 14.38,
+      "offset_time": 44.952,
+      "offset_amp": -52.06
+     },
+     {
+      "onset_time": 48.224,
+      "onset_amp": -95.98,
+      "offset_time": 48.4,
+      "offset_amp": -136.43
+     },
+     {
+      "onset_time": 48.832,
+      "onset_amp": -129.91,
+      "offset_time": 49.868,
+      "offset_amp": -1.69
+     },
+     {
+      "onset_time": 54.124,
+      "onset_amp": 17.37,
+      "offset_time": 54.468,
+      "offset_amp": -28.74
+     }
+    ]
+   }
+  }
+ },
+ "(03.13_10)김상백_2": {
+  "s9": {
+   "auto_offset": -0.424,
+   "residual": 0.34,
+   "corrected_offset": -0.084,
+   "method": "grf-edge-align (9/12, med=+0.00s)",
+   "anchors": [
+    15.332,
+    19.356,
+    25.0559,
+    29.324,
+    34.824,
+    39.136,
+    44.924,
+    49.88
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 1.536,
+      "onset_amp": -209.51,
+      "offset_time": 2.216,
+      "offset_amp": -137.8
+     },
+     {
+      "onset_time": 2.576,
+      "onset_amp": -158.46,
+      "offset_time": 3.252,
+      "offset_amp": -85.42
+     },
+     {
+      "onset_time": 3.768,
+      "onset_amp": -90.11,
+      "offset_time": 3.92,
+      "offset_amp": -69.38
+     },
+     {
+      "onset_time": 19.492,
+      "onset_amp": 77.22,
+      "offset_time": 19.968,
+      "offset_amp": 45.36
+     },
+     {
+      "onset_time": 19.82,
+      "onset_amp": 19.54,
+      "offset_time": 19.996,
+      "offset_amp": 41.55
+     },
+     {
+      "onset_time": 24.256,
+      "onset_amp": 101.56,
+      "offset_time": 24.384,
+      "offset_amp": 119.51
+     },
+     {
+      "onset_time": 24.884,
+      "onset_amp": 111.83,
+      "offset_time": 25.016,
+      "offset_amp": 95.6
+     },
+     {
+      "onset_time": 29.672,
+      "onset_amp": 67.12,
+      "offset_time": 30.324,
+      "offset_amp": 36.73
+     },
+     {
+      "onset_time": 29.816,
+      "onset_amp": 52.88,
+      "offset_time": 30.004,
+      "offset_amp": 72.89
+     },
+     {
+      "onset_time": 34.36,
+      "onset_amp": 108.98,
+      "offset_time": 35.228,
+      "offset_amp": 49.76
+     },
+     {
+      "onset_time": 39.168,
+      "onset_amp": 29.23,
+      "offset_time": 39.68,
+      "offset_amp": -35.97
+     },
+     {
+      "onset_time": 39.448,
+      "onset_amp": -39.15,
+      "offset_time": 39.568,
+      "offset_amp": -26.92
+     },
+     {
+      "onset_time": 44.584,
+      "onset_amp": 40.52,
+      "offset_time": 45.284,
+      "offset_amp": -57.48
+     },
+     {
+      "onset_time": 49.876,
+      "onset_amp": -4.18,
+      "offset_time": 50.356,
+      "offset_amp": -44.48
+     },
+     {
+      "onset_time": 50.204,
+      "onset_amp": -78.5,
+      "offset_time": 50.368,
+      "offset_amp": -50.29
+     },
+     {
+      "onset_time": 55.248,
+      "onset_amp": -45.12,
+      "offset_time": 55.34,
+      "offset_amp": -27.64
+     },
+     {
+      "onset_time": 56.104,
+      "onset_amp": -17.83,
+      "offset_time": 56.944,
+      "offset_amp": -92.34
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 9.828,
+      "onset_amp": 0.6,
+      "offset_time": 10.664,
+      "offset_amp": 51.64
+     },
+     {
+      "onset_time": 14.816,
+      "onset_amp": 68.96,
+      "offset_time": 15.032,
+      "offset_amp": 52.09
+     },
+     {
+      "onset_time": 19.808,
+      "onset_amp": 18.46,
+      "offset_time": 20.016,
+      "offset_amp": 56.17
+     },
+     {
+      "onset_time": 24.668,
+      "onset_amp": 66.23,
+      "offset_time": 25.096,
+      "offset_amp": 0.63
+     },
+     {
+      "onset_time": 29.68,
+      "onset_amp": -43.38,
+      "offset_time": 30.18,
+      "offset_amp": 11.67
+     },
+     {
+      "onset_time": 34.592,
+      "onset_amp": 75.09,
+      "offset_time": 34.96,
+      "offset_amp": -15.03
+     },
+     {
+      "onset_time": 39.468,
+      "onset_amp": 12.5,
+      "offset_time": 39.864,
+      "offset_amp": 49.09
+     },
+     {
+      "onset_time": 44.656,
+      "onset_amp": 26.84,
+      "offset_time": 45.296,
+      "offset_amp": -145.07
+     },
+     {
+      "onset_time": 47.616,
+      "onset_amp": -99.39,
+      "offset_time": 47.708,
+      "offset_amp": -85.83
+     },
+     {
+      "onset_time": 49.768,
+      "onset_amp": -42.75,
+      "offset_time": 50.388,
+      "offset_amp": 11.48
+     },
+     {
+      "onset_time": 55.752,
+      "onset_amp": 50.67,
+      "offset_time": 56.64,
+      "offset_amp": -39.21
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 9.72,
+      "onset_amp": 29.92,
+      "offset_time": 10.616,
+      "offset_amp": 77.56
+     },
+     {
+      "onset_time": 15.456,
+      "onset_amp": 18.62,
+      "offset_time": 15.528,
+      "offset_amp": 7.71
+     },
+     {
+      "onset_time": 19.828,
+      "onset_amp": 15.59,
+      "offset_time": 20.02,
+      "offset_amp": 53.17
+     },
+     {
+      "onset_time": 24.392,
+      "onset_amp": 66.43,
+      "offset_time": 25.3,
+      "offset_amp": -14.47
+     },
+     {
+      "onset_time": 24.568,
+      "onset_amp": 71.79,
+      "offset_time": 25.372,
+      "offset_amp": -18.34
+     },
+     {
+      "onset_time": 29.996,
+      "onset_amp": -1.39,
+      "offset_time": 30.304,
+      "offset_amp": 30.32
+     },
+     {
+      "onset_time": 34.612,
+      "onset_amp": 36.32,
+      "offset_time": 35.228,
+      "offset_amp": -34.85
+     },
+     {
+      "onset_time": 39.468,
+      "onset_amp": -1.2,
+      "offset_time": 39.892,
+      "offset_amp": 38.57
+     },
+     {
+      "onset_time": 44.552,
+      "onset_amp": 37.35,
+      "offset_time": 45.276,
+      "offset_amp": -129.94
+     },
+     {
+      "onset_time": 47.588,
+      "onset_amp": -93.8,
+      "offset_time": 47.688,
+      "offset_amp": -79.88
+     },
+     {
+      "onset_time": 49.888,
+      "onset_amp": -27.89,
+      "offset_time": 50.632,
+      "offset_amp": 22.74
+     },
+     {
+      "onset_time": 55.48,
+      "onset_amp": 54.85,
+      "offset_time": 56.244,
+      "offset_amp": -0.46
+     },
+     {
+      "onset_time": 56.62,
+      "onset_amp": -22.75,
+      "offset_time": 56.716,
+      "offset_amp": -31.72
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 0.176,
+      "onset_amp": -622.29,
+      "offset_time": 0.7,
+      "offset_amp": -581.17
+     },
+     {
+      "onset_time": 1.336,
+      "onset_amp": -524.63,
+      "offset_time": 3.628,
+      "offset_amp": -254.06
+     },
+     {
+      "onset_time": 9.756,
+      "onset_amp": 11.96,
+      "offset_time": 10.672,
+      "offset_amp": 60.94
+     },
+     {
+      "onset_time": 14.852,
+      "onset_amp": 156.88,
+      "offset_time": 15.02,
+      "offset_amp": 147.74
+     },
+     {
+      "onset_time": 19.836,
+      "onset_amp": 206.6,
+      "offset_time": 20.02,
+      "offset_amp": 241.65
+     },
+     {
+      "onset_time": 24.664,
+      "onset_amp": 225.58,
+      "offset_time": 25.04,
+      "offset_amp": 177.79
+     },
+     {
+      "onset_time": 30.0,
+      "onset_amp": 118.21,
+      "offset_time": 30.108,
+      "offset_amp": 139.88
+     },
+     {
+      "onset_time": 34.62,
+      "onset_amp": 137.26,
+      "offset_time": 34.948,
+      "offset_amp": 74.64
+     },
+     {
+      "onset_time": 39.452,
+      "onset_amp": 19.49,
+      "offset_time": 39.688,
+      "offset_amp": 45.72
+     },
+     {
+      "onset_time": 44.448,
+      "onset_amp": -8.03,
+      "offset_time": 45.18,
+      "offset_amp": -132.83
+     },
+     {
+      "onset_time": 47.572,
+      "onset_amp": -145.51,
+      "offset_time": 47.7,
+      "offset_amp": -123.41
+     },
+     {
+      "onset_time": 50.244,
+      "onset_amp": -109.48,
+      "offset_time": 50.488,
+      "offset_amp": -79.79
+     },
+     {
+      "onset_time": 55.764,
+      "onset_amp": -99.91,
+      "offset_time": 56.224,
+      "offset_amp": -157.14
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 9.928,
+      "onset_amp": -47.05,
+      "offset_time": 10.66,
+      "offset_amp": -21.23
+     },
+     {
+      "onset_time": 15.176,
+      "onset_amp": 1.48,
+      "offset_time": 15.348,
+      "offset_amp": -8.16
+     },
+     {
+      "onset_time": 19.74,
+      "onset_amp": 24.83,
+      "offset_time": 20.004,
+      "offset_amp": 70.1
+     },
+     {
+      "onset_time": 24.924,
+      "onset_amp": 79.99,
+      "offset_time": 25.36,
+      "offset_amp": 17.37
+     },
+     {
+      "onset_time": 29.628,
+      "onset_amp": 49.62,
+      "offset_time": 30.336,
+      "offset_amp": 80.23
+     },
+     {
+      "onset_time": 34.096,
+      "onset_amp": 86.65,
+      "offset_time": 34.228,
+      "offset_amp": 67.03
+     },
+     {
+      "onset_time": 34.632,
+      "onset_amp": 53.16,
+      "offset_time": 35.036,
+      "offset_amp": -36.18
+     },
+     {
+      "onset_time": 38.752,
+      "onset_amp": -24.92,
+      "offset_time": 39.78,
+      "offset_amp": 31.83
+     },
+     {
+      "onset_time": 44.26,
+      "onset_amp": -3.74,
+      "offset_time": 45.42,
+      "offset_amp": -77.07
+     },
+     {
+      "onset_time": 44.52,
+      "onset_amp": 4.62,
+      "offset_time": 45.036,
+      "offset_amp": -116.76
+     },
+     {
+      "onset_time": 49.724,
+      "onset_amp": -35.23,
+      "offset_time": 51.096,
+      "offset_amp": 27.93
+     },
+     {
+      "onset_time": 55.82,
+      "onset_amp": 19.51,
+      "offset_time": 56.232,
+      "offset_amp": -41.54
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 0.568,
+      "onset_amp": -31.49,
+      "offset_time": 0.94,
+      "offset_amp": 27.06
+     },
+     {
+      "onset_time": 1.528,
+      "onset_amp": 71.74,
+      "offset_time": 3.224,
+      "offset_amp": 39.47
+     },
+     {
+      "onset_time": 9.952,
+      "onset_amp": -85.7,
+      "offset_time": 10.66,
+      "offset_amp": -23.36
+     },
+     {
+      "onset_time": 12.416,
+      "onset_amp": 10.75,
+      "offset_time": 12.472,
+      "offset_amp": 29.38
+     },
+     {
+      "onset_time": 14.804,
+      "onset_amp": 67.51,
+      "offset_time": 14.952,
+      "offset_amp": 29.95
+     },
+     {
+      "onset_time": 19.448,
+      "onset_amp": 33.23,
+      "offset_time": 20.124,
+      "offset_amp": -1.81
+     },
+     {
+      "onset_time": 19.936,
+      "onset_amp": -32.37,
+      "offset_time": 20.164,
+      "offset_amp": -5.97
+     },
+     {
+      "onset_time": 24.216,
+      "onset_amp": -15.18,
+      "offset_time": 24.512,
+      "offset_amp": 5.78
+     },
+     {
+      "onset_time": 24.86,
+      "onset_amp": 10.82,
+      "offset_time": 24.996,
+      "offset_amp": -8.0
+     },
+     {
+      "onset_time": 29.868,
+      "onset_amp": 65.74,
+      "offset_time": 30.08,
+      "offset_amp": 103.1
+     },
+     {
+      "onset_time": 34.724,
+      "onset_amp": 44.97,
+      "offset_time": 35.148,
+      "offset_amp": -69.59
+     },
+     {
+      "onset_time": 38.592,
+      "onset_amp": -75.57,
+      "offset_time": 40.024,
+      "offset_amp": 26.78
+     },
+     {
+      "onset_time": 39.428,
+      "onset_amp": -30.67,
+      "offset_time": 39.564,
+      "offset_amp": 2.52
+     },
+     {
+      "onset_time": 44.252,
+      "onset_amp": 36.18,
+      "offset_time": 45.32,
+      "offset_amp": -42.96
+     },
+     {
+      "onset_time": 44.796,
+      "onset_amp": 16.79,
+      "offset_time": 44.988,
+      "offset_amp": -51.18
+     },
+     {
+      "onset_time": 48.228,
+      "onset_amp": -18.95,
+      "offset_time": 48.648,
+      "offset_amp": 15.43
+     },
+     {
+      "onset_time": 50.128,
+      "onset_amp": 7.61,
+      "offset_time": 50.26,
+      "offset_amp": 35.69
+     },
+     {
+      "onset_time": 55.4,
+      "onset_amp": 7.34,
+      "offset_time": 55.48,
+      "offset_amp": 39.71
+     },
+     {
+      "onset_time": 56.02,
+      "onset_amp": 37.56,
+      "offset_time": 56.152,
+      "offset_amp": 7.39
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 6.412,
+      "onset_amp": -85.21,
+      "offset_time": 6.644,
+      "offset_amp": -43.73
+     },
+     {
+      "onset_time": 9.944,
+      "onset_amp": 46.2,
+      "offset_time": 10.704,
+      "offset_amp": 76.64
+     },
+     {
+      "onset_time": 14.812,
+      "onset_amp": 57.94,
+      "offset_time": 14.984,
+      "offset_amp": 46.42
+     },
+     {
+      "onset_time": 19.364,
+      "onset_amp": 76.04,
+      "offset_time": 20.0,
+      "offset_amp": 70.15
+     },
+     {
+      "onset_time": 19.792,
+      "onset_amp": 29.23,
+      "offset_time": 20.012,
+      "offset_amp": 61.98
+     },
+     {
+      "onset_time": 24.88,
+      "onset_amp": 28.19,
+      "offset_time": 25.344,
+      "offset_amp": -27.32
+     },
+     {
+      "onset_time": 29.596,
+      "onset_amp": 42.91,
+      "offset_time": 30.52,
+      "offset_amp": 72.47
+     },
+     {
+      "onset_time": 34.24,
+      "onset_amp": 34.46,
+      "offset_time": 35.768,
+      "offset_amp": -63.31
+     },
+     {
+      "onset_time": 34.536,
+      "onset_amp": 40.66,
+      "offset_time": 35.06,
+      "offset_amp": -55.13
+     },
+     {
+      "onset_time": 38.776,
+      "onset_amp": -30.46,
+      "offset_time": 39.532,
+      "offset_amp": 17.77
+     },
+     {
+      "onset_time": 44.68,
+      "onset_amp": -6.7,
+      "offset_time": 44.932,
+      "offset_amp": -65.94
+     },
+     {
+      "onset_time": 49.772,
+      "onset_amp": -18.43,
+      "offset_time": 49.936,
+      "offset_amp": 16.56
+     },
+     {
+      "onset_time": 55.836,
+      "onset_amp": 14.35,
+      "offset_time": 56.208,
+      "offset_amp": -40.0
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 1.248,
+      "onset_amp": -170.99,
+      "offset_time": 3.212,
+      "offset_amp": -89.52
+     },
+     {
+      "onset_time": 9.796,
+      "onset_amp": -13.29,
+      "offset_time": 10.956,
+      "offset_amp": 36.43
+     },
+     {
+      "onset_time": 14.836,
+      "onset_amp": 90.18,
+      "offset_time": 15.048,
+      "offset_amp": 76.45
+     },
+     {
+      "onset_time": 19.828,
+      "onset_amp": 42.69,
+      "offset_time": 20.032,
+      "offset_amp": 79.14
+     },
+     {
+      "onset_time": 24.776,
+      "onset_amp": 100.75,
+      "offset_time": 25.52,
+      "offset_amp": 23.17
+     },
+     {
+      "onset_time": 29.624,
+      "onset_amp": 56.46,
+      "offset_time": 30.352,
+      "offset_amp": 81.41
+     },
+     {
+      "onset_time": 34.596,
+      "onset_amp": 67.08,
+      "offset_time": 36.024,
+      "offset_amp": -45.18
+     },
+     {
+      "onset_time": 38.784,
+      "onset_amp": -44.98,
+      "offset_time": 39.62,
+      "offset_amp": 30.29
+     },
+     {
+      "onset_time": 44.368,
+      "onset_amp": 41.1,
+      "offset_time": 45.536,
+      "offset_amp": -35.43
+     },
+     {
+      "onset_time": 46.188,
+      "onset_amp": -24.37,
+      "offset_time": 47.0,
+      "offset_amp": -66.84
+     },
+     {
+      "onset_time": 49.484,
+      "onset_amp": -68.86,
+      "offset_time": 50.952,
+      "offset_amp": 8.82
+     },
+     {
+      "onset_time": 55.848,
+      "onset_amp": -13.34,
+      "offset_time": 56.26,
+      "offset_amp": -75.98
+     },
+     {
+      "onset_time": 56.668,
+      "onset_amp": -97.8,
+      "offset_time": 56.768,
+      "offset_amp": -108.95
+     }
+    ]
+   }
+  }
+ },
+ "(02.05_13)이용준_1": {
+  "f6": {
+   "auto_offset": -9.216,
+   "residual": 0.0,
+   "corrected_offset": -9.216,
+   "method": "large-offset review (edge-align=-10.00)",
+   "anchors": [
+    5.172,
+    11.056,
+    16.1999,
+    20.924,
+    26.92,
+    31.796,
+    36.7599,
+    41.7639
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 1.628,
+      "onset_amp": -75.0,
+      "offset_time": 3.2,
+      "offset_amp": -51.6
+     },
+     {
+      "onset_time": 4.44,
+      "onset_amp": -63.12,
+      "offset_time": 4.648,
+      "offset_amp": -80.53
+     },
+     {
+      "onset_time": 5.032,
+      "onset_amp": -81.13,
+      "offset_time": 5.22,
+      "offset_amp": -92.99
+     },
+     {
+      "onset_time": 8.3,
+      "onset_amp": -59.87,
+      "offset_time": 9.348,
+      "offset_amp": 38.96
+     },
+     {
+      "onset_time": 10.604,
+      "onset_amp": 66.91,
+      "offset_time": 11.04,
+      "offset_amp": 77.16
+     },
+     {
+      "onset_time": 25.248,
+      "onset_amp": 74.56,
+      "offset_time": 25.86,
+      "offset_amp": -58.65
+     },
+     {
+      "onset_time": 26.512,
+      "onset_amp": -70.43,
+      "offset_time": 26.644,
+      "offset_amp": -48.46
+     },
+     {
+      "onset_time": 27.532,
+      "onset_amp": -20.95,
+      "offset_time": 27.624,
+      "offset_amp": -12.79
+     },
+     {
+      "onset_time": 29.6,
+      "onset_amp": 14.54,
+      "offset_time": 30.62,
+      "offset_amp": -48.01
+     },
+     {
+      "onset_time": 35.904,
+      "onset_amp": 46.46,
+      "offset_time": 36.476,
+      "offset_amp": -62.91
+     },
+     {
+      "onset_time": 36.08,
+      "onset_amp": 78.08,
+      "offset_time": 36.528,
+      "offset_amp": -68.47
+     },
+     {
+      "onset_time": 40.044,
+      "onset_amp": -60.34,
+      "offset_time": 41.56,
+      "offset_amp": 62.31
+     },
+     {
+      "onset_time": 41.064,
+      "onset_amp": -76.21,
+      "offset_time": 41.368,
+      "offset_amp": 30.93
+     },
+     {
+      "onset_time": 45.688,
+      "onset_amp": 111.87,
+      "offset_time": 46.44,
+      "offset_amp": -92.74
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 1.732,
+      "onset_amp": -260.42,
+      "offset_time": 3.176,
+      "offset_amp": -32.89
+     },
+     {
+      "onset_time": 4.356,
+      "onset_amp": -64.1,
+      "offset_time": 4.816,
+      "offset_amp": -104.58
+     },
+     {
+      "onset_time": 4.44,
+      "onset_amp": -67.36,
+      "offset_time": 4.696,
+      "offset_amp": -98.19
+     },
+     {
+      "onset_time": 8.404,
+      "onset_amp": -78.69,
+      "offset_time": 9.72,
+      "offset_amp": 96.16
+     },
+     {
+      "onset_time": 10.612,
+      "onset_amp": 124.47,
+      "offset_time": 11.372,
+      "offset_amp": 147.02
+     },
+     {
+      "onset_time": 14.164,
+      "onset_amp": 123.86,
+      "offset_time": 14.392,
+      "offset_amp": 94.88
+     },
+     {
+      "onset_time": 20.032,
+      "onset_amp": 84.51,
+      "offset_time": 20.264,
+      "offset_amp": 114.64
+     },
+     {
+      "onset_time": 20.484,
+      "onset_amp": 116.54,
+      "offset_time": 20.764,
+      "offset_amp": 127.57
+     },
+     {
+      "onset_time": 25.24,
+      "onset_amp": 87.37,
+      "offset_time": 25.696,
+      "offset_amp": -25.01
+     },
+     {
+      "onset_time": 28.24,
+      "onset_amp": 4.45,
+      "offset_time": 30.12,
+      "offset_amp": -64.28
+     },
+     {
+      "onset_time": 30.396,
+      "onset_amp": -55.13,
+      "offset_time": 31.0,
+      "offset_amp": -2.52
+     },
+     {
+      "onset_time": 35.716,
+      "onset_amp": 50.07,
+      "offset_time": 36.588,
+      "offset_amp": -107.61
+     },
+     {
+      "onset_time": 35.928,
+      "onset_amp": 29.53,
+      "offset_time": 36.46,
+      "offset_amp": -88.25
+     },
+     {
+      "onset_time": 40.06,
+      "onset_amp": -83.36,
+      "offset_time": 41.648,
+      "offset_amp": 84.01
+     },
+     {
+      "onset_time": 40.524,
+      "onset_amp": -176.88,
+      "offset_time": 41.484,
+      "offset_amp": 70.4
+     },
+     {
+      "onset_time": 45.356,
+      "onset_amp": 94.11,
+      "offset_time": 46.084,
+      "offset_amp": -62.46
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 1.624,
+      "onset_amp": -206.89,
+      "offset_time": 3.248,
+      "offset_amp": -82.25
+     },
+     {
+      "onset_time": 4.356,
+      "onset_amp": -90.47,
+      "offset_time": 4.804,
+      "offset_amp": -141.18
+     },
+     {
+      "onset_time": 4.432,
+      "onset_amp": -94.82,
+      "offset_time": 4.688,
+      "offset_amp": -132.47
+     },
+     {
+      "onset_time": 8.364,
+      "onset_amp": -50.24,
+      "offset_time": 9.212,
+      "offset_amp": 67.48
+     },
+     {
+      "onset_time": 10.596,
+      "onset_amp": 112.63,
+      "offset_time": 11.04,
+      "offset_amp": 124.75
+     },
+     {
+      "onset_time": 19.816,
+      "onset_amp": 88.03,
+      "offset_time": 20.036,
+      "offset_amp": 114.19
+     },
+     {
+      "onset_time": 25.224,
+      "onset_amp": 93.07,
+      "offset_time": 25.724,
+      "offset_amp": 3.73
+     },
+     {
+      "onset_time": 28.188,
+      "onset_amp": -17.99,
+      "offset_time": 29.492,
+      "offset_amp": -95.02
+     },
+     {
+      "onset_time": 30.436,
+      "onset_amp": -126.75,
+      "offset_time": 30.572,
+      "offset_amp": -91.16
+     },
+     {
+      "onset_time": 31.448,
+      "onset_amp": -68.25,
+      "offset_time": 31.816,
+      "offset_amp": -48.91
+     },
+     {
+      "onset_time": 35.88,
+      "onset_amp": 38.32,
+      "offset_time": 36.656,
+      "offset_amp": -105.25
+     },
+     {
+      "onset_time": 35.96,
+      "onset_amp": 31.03,
+      "offset_time": 36.512,
+      "offset_amp": -85.78
+     },
+     {
+      "onset_time": 40.08,
+      "onset_amp": -94.96,
+      "offset_time": 41.66,
+      "offset_amp": 70.12
+     },
+     {
+      "onset_time": 40.5,
+      "onset_amp": -216.15,
+      "offset_time": 41.46,
+      "offset_amp": 65.76
+     },
+     {
+      "onset_time": 45.756,
+      "onset_amp": 72.4,
+      "offset_time": 46.1,
+      "offset_amp": -42.43
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 1.716,
+      "onset_amp": -148.04,
+      "offset_time": 3.244,
+      "offset_amp": -68.08
+     },
+     {
+      "onset_time": 4.096,
+      "onset_amp": -75.38,
+      "offset_time": 4.84,
+      "offset_amp": -119.3
+     },
+     {
+      "onset_time": 4.392,
+      "onset_amp": -83.78,
+      "offset_time": 4.692,
+      "offset_amp": -112.37
+     },
+     {
+      "onset_time": 8.32,
+      "onset_amp": -90.32,
+      "offset_time": 9.428,
+      "offset_amp": 37.89
+     },
+     {
+      "onset_time": 10.56,
+      "onset_amp": 83.41,
+      "offset_time": 11.164,
+      "offset_amp": 99.25
+     },
+     {
+      "onset_time": 19.82,
+      "onset_amp": 88.87,
+      "offset_time": 20.008,
+      "offset_amp": 104.89
+     },
+     {
+      "onset_time": 25.24,
+      "onset_amp": 108.49,
+      "offset_time": 25.72,
+      "offset_amp": 13.93
+     },
+     {
+      "onset_time": 28.296,
+      "onset_amp": 18.05,
+      "offset_time": 29.812,
+      "offset_amp": -94.43
+     },
+     {
+      "onset_time": 30.428,
+      "onset_amp": -105.0,
+      "offset_time": 30.548,
+      "offset_amp": -76.74
+     },
+     {
+      "onset_time": 31.48,
+      "onset_amp": -61.99,
+      "offset_time": 32.784,
+      "offset_amp": -27.76
+     },
+     {
+      "onset_time": 35.948,
+      "onset_amp": -0.38,
+      "offset_time": 36.56,
+      "offset_amp": -95.3
+     },
+     {
+      "onset_time": 35.988,
+      "onset_amp": -2.76,
+      "offset_time": 36.84,
+      "offset_amp": -96.73
+     },
+     {
+      "onset_time": 40.04,
+      "onset_amp": -82.64,
+      "offset_time": 41.668,
+      "offset_amp": 44.88
+     },
+     {
+      "onset_time": 40.508,
+      "onset_amp": -195.67,
+      "offset_time": 41.456,
+      "offset_amp": 36.24
+     },
+     {
+      "onset_time": 45.752,
+      "onset_amp": 54.58,
+      "offset_time": 46.088,
+      "offset_amp": -44.95
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 1.72,
+      "onset_amp": -101.83,
+      "offset_time": 3.548,
+      "offset_amp": -65.23
+     },
+     {
+      "onset_time": 4.388,
+      "onset_amp": -56.04,
+      "offset_time": 4.92,
+      "offset_amp": -88.12
+     },
+     {
+      "onset_time": 8.8,
+      "onset_amp": -32.82,
+      "offset_time": 9.436,
+      "offset_amp": 12.71
+     },
+     {
+      "onset_time": 10.56,
+      "onset_amp": 17.96,
+      "offset_time": 11.016,
+      "offset_amp": 33.96
+     },
+     {
+      "onset_time": 14.252,
+      "onset_amp": 46.67,
+      "offset_time": 14.392,
+      "offset_amp": 66.05
+     },
+     {
+      "onset_time": 20.132,
+      "onset_amp": 165.97,
+      "offset_time": 20.396,
+      "offset_amp": 115.56
+     },
+     {
+      "onset_time": 25.224,
+      "onset_amp": 70.32,
+      "offset_time": 26.192,
+      "offset_amp": -44.72
+     },
+     {
+      "onset_time": 32.916,
+      "onset_amp": -37.88,
+      "offset_time": 34.312,
+      "offset_amp": 0.53
+     },
+     {
+      "onset_time": 35.928,
+      "onset_amp": 17.19,
+      "offset_time": 36.504,
+      "offset_amp": -128.27
+     },
+     {
+      "onset_time": 35.992,
+      "onset_amp": 7.38,
+      "offset_time": 36.404,
+      "offset_amp": -113.41
+     },
+     {
+      "onset_time": 40.068,
+      "onset_amp": -100.61,
+      "offset_time": 41.612,
+      "offset_amp": 70.24
+     },
+     {
+      "onset_time": 40.532,
+      "onset_amp": -167.23,
+      "offset_time": 41.492,
+      "offset_amp": 61.62
+     },
+     {
+      "onset_time": 45.796,
+      "onset_amp": 89.9,
+      "offset_time": 46.12,
+      "offset_amp": -58.93
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 1.86,
+      "onset_amp": -114.87,
+      "offset_time": 3.012,
+      "offset_amp": -69.59
+     },
+     {
+      "onset_time": 4.368,
+      "onset_amp": -55.95,
+      "offset_time": 4.908,
+      "offset_amp": -85.48
+     },
+     {
+      "onset_time": 8.856,
+      "onset_amp": -62.93,
+      "offset_time": 9.74,
+      "offset_amp": -9.29
+     },
+     {
+      "onset_time": 11.212,
+      "onset_amp": 25.48,
+      "offset_time": 11.828,
+      "offset_amp": 40.82
+     },
+     {
+      "onset_time": 20.068,
+      "onset_amp": 109.42,
+      "offset_time": 20.384,
+      "offset_amp": 88.79
+     },
+     {
+      "onset_time": 25.24,
+      "onset_amp": 56.64,
+      "offset_time": 25.664,
+      "offset_amp": -59.92
+     },
+     {
+      "onset_time": 27.664,
+      "onset_amp": -4.47,
+      "offset_time": 28.236,
+      "offset_amp": 53.09
+     },
+     {
+      "onset_time": 35.82,
+      "onset_amp": 33.77,
+      "offset_time": 36.408,
+      "offset_amp": -79.88
+     },
+     {
+      "onset_time": 35.916,
+      "onset_amp": 34.76,
+      "offset_time": 36.524,
+      "offset_amp": -93.77
+     },
+     {
+      "onset_time": 40.036,
+      "onset_amp": -46.27,
+      "offset_time": 41.652,
+      "offset_amp": 44.89
+     },
+     {
+      "onset_time": 41.292,
+      "onset_amp": 32.17,
+      "offset_time": 41.428,
+      "offset_amp": 50.33
+     },
+     {
+      "onset_time": 45.416,
+      "onset_amp": 42.56,
+      "offset_time": 46.108,
+      "offset_amp": -105.44
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 1.684,
+      "onset_amp": -187.04,
+      "offset_time": 2.832,
+      "offset_amp": -47.78
+     },
+     {
+      "onset_time": 4.344,
+      "onset_amp": -36.86,
+      "offset_time": 4.952,
+      "offset_amp": -92.64
+     },
+     {
+      "onset_time": 4.436,
+      "onset_amp": -41.49,
+      "offset_time": 4.852,
+      "offset_amp": -88.42
+     },
+     {
+      "onset_time": 8.288,
+      "onset_amp": -98.53,
+      "offset_time": 8.34,
+      "offset_amp": -103.68
+     },
+     {
+      "onset_time": 8.944,
+      "onset_amp": -102.86,
+      "offset_time": 9.404,
+      "offset_amp": 42.72
+     },
+     {
+      "onset_time": 10.612,
+      "onset_amp": 74.75,
+      "offset_time": 11.06,
+      "offset_amp": 91.57
+     },
+     {
+      "onset_time": 24.86,
+      "onset_amp": 73.23,
+      "offset_time": 25.644,
+      "offset_amp": -42.5
+     },
+     {
+      "onset_time": 33.192,
+      "onset_amp": -46.81,
+      "offset_time": 34.096,
+      "offset_amp": -10.77
+     },
+     {
+      "onset_time": 35.8,
+      "onset_amp": -13.82,
+      "offset_time": 36.42,
+      "offset_amp": -128.08
+     },
+     {
+      "onset_time": 35.944,
+      "onset_amp": -11.27,
+      "offset_time": 36.532,
+      "offset_amp": -142.5
+     },
+     {
+      "onset_time": 40.1,
+      "onset_amp": -68.37,
+      "offset_time": 41.596,
+      "offset_amp": 98.05
+     },
+     {
+      "onset_time": 41.24,
+      "onset_amp": 51.19,
+      "offset_time": 41.44,
+      "offset_amp": 108.99
+     },
+     {
+      "onset_time": 45.224,
+      "onset_amp": 97.89,
+      "offset_time": 45.364,
+      "offset_amp": 80.29
+     },
+     {
+      "onset_time": 45.764,
+      "onset_amp": 58.25,
+      "offset_time": 46.136,
+      "offset_amp": -70.59
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 0.996,
+      "onset_amp": -311.43,
+      "offset_time": 1.028,
+      "offset_amp": -307.37
+     },
+     {
+      "onset_time": 1.652,
+      "onset_amp": -266.34,
+      "offset_time": 2.844,
+      "offset_amp": -94.62
+     },
+     {
+      "onset_time": 4.316,
+      "onset_amp": -57.35,
+      "offset_time": 4.896,
+      "offset_amp": -89.65
+     },
+     {
+      "onset_time": 8.876,
+      "onset_amp": -68.94,
+      "offset_time": 9.86,
+      "offset_amp": 70.32
+     },
+     {
+      "onset_time": 10.172,
+      "onset_amp": 84.76,
+      "offset_time": 10.992,
+      "offset_amp": 113.67
+     },
+     {
+      "onset_time": 25.228,
+      "onset_amp": 116.57,
+      "offset_time": 25.752,
+      "offset_amp": 19.72
+     },
+     {
+      "onset_time": 27.996,
+      "onset_amp": 54.01,
+      "offset_time": 30.104,
+      "offset_amp": -42.0
+     },
+     {
+      "onset_time": 30.26,
+      "onset_amp": -35.82,
+      "offset_time": 30.712,
+      "offset_amp": -13.44
+     },
+     {
+      "onset_time": 31.86,
+      "onset_amp": -6.7,
+      "offset_time": 32.036,
+      "offset_amp": 9.59
+     },
+     {
+      "onset_time": 35.844,
+      "onset_amp": 48.78,
+      "offset_time": 36.508,
+      "offset_amp": -75.21
+     },
+     {
+      "onset_time": 35.928,
+      "onset_amp": 38.16,
+      "offset_time": 36.4,
+      "offset_amp": -64.41
+     },
+     {
+      "onset_time": 40.084,
+      "onset_amp": -128.96,
+      "offset_time": 41.68,
+      "offset_amp": 31.92
+     },
+     {
+      "onset_time": 41.484,
+      "onset_amp": -44.08,
+      "offset_time": 41.632,
+      "offset_amp": 35.54
+     },
+     {
+      "onset_time": 45.704,
+      "onset_amp": 44.21,
+      "offset_time": 46.512,
+      "offset_amp": -79.83
+     }
+    ]
+   }
+  }
+ },
+ "(02.11_10)이채현_1": {
+  "c8": {
+   "auto_offset": -0.6319,
+   "residual": 0.0,
+   "corrected_offset": -0.6319,
+   "method": "fallback-xcorr (auto-ok)",
+   "anchors": [
+    13.8641,
+    18.9161,
+    23.6601,
+    28.4001,
+    34.124,
+    39.0721,
+    44.3161,
+    49.5081
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 12.952,
+      "onset_amp": 3.72,
+      "offset_time": 13.604,
+      "offset_amp": -13.98
+     },
+     {
+      "onset_time": 14.484,
+      "onset_amp": -1.3,
+      "offset_time": 14.568,
+      "offset_amp": 13.05
+     },
+     {
+      "onset_time": 19.528,
+      "onset_amp": 27.26,
+      "offset_time": 19.68,
+      "offset_amp": 38.36
+     },
+     {
+      "onset_time": 24.272,
+      "onset_amp": 34.05,
+      "offset_time": 24.468,
+      "offset_amp": -17.73
+     },
+     {
+      "onset_time": 28.872,
+      "onset_amp": -1.66,
+      "offset_time": 29.22,
+      "offset_amp": 64.99
+     },
+     {
+      "onset_time": 34.736,
+      "onset_amp": -65.91,
+      "offset_time": 34.952,
+      "offset_amp": -149.5
+     },
+     {
+      "onset_time": 37.284,
+      "onset_amp": -22.88,
+      "offset_time": 37.464,
+      "offset_amp": 3.31
+     },
+     {
+      "onset_time": 38.496,
+      "onset_amp": 16.29,
+      "offset_time": 39.856,
+      "offset_amp": 44.05
+     },
+     {
+      "onset_time": 38.952,
+      "onset_amp": -16.17,
+      "offset_time": 39.576,
+      "offset_amp": 100.1
+     },
+     {
+      "onset_time": 45.524,
+      "onset_amp": -10.08,
+      "offset_time": 46.736,
+      "offset_amp": -36.97
+     },
+     {
+      "onset_time": 48.996,
+      "onset_amp": -41.97,
+      "offset_time": 50.656,
+      "offset_amp": 39.1
+     },
+     {
+      "onset_time": 49.672,
+      "onset_amp": -53.26,
+      "offset_time": 50.064,
+      "offset_amp": 98.94
+     },
+     {
+      "onset_time": 54.988,
+      "onset_amp": 31.9,
+      "offset_time": 55.836,
+      "offset_amp": -6.85
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 1.684,
+      "onset_amp": -23.13,
+      "offset_time": 3.076,
+      "offset_amp": 5.14
+     },
+     {
+      "onset_time": 8.34,
+      "onset_amp": 6.29,
+      "offset_time": 9.088,
+      "offset_amp": -25.57
+     },
+     {
+      "onset_time": 14.008,
+      "onset_amp": -40.28,
+      "offset_time": 14.6,
+      "offset_amp": 19.99
+     },
+     {
+      "onset_time": 14.768,
+      "onset_amp": 35.11,
+      "offset_time": 14.944,
+      "offset_amp": 26.47
+     },
+     {
+      "onset_time": 18.884,
+      "onset_amp": 40.93,
+      "offset_time": 19.156,
+      "offset_amp": 54.53
+     },
+     {
+      "onset_time": 19.316,
+      "onset_amp": 48.67,
+      "offset_time": 19.528,
+      "offset_amp": 24.77
+     },
+     {
+      "onset_time": 24.996,
+      "onset_amp": 21.89,
+      "offset_time": 25.188,
+      "offset_amp": -3.47
+     },
+     {
+      "onset_time": 28.8,
+      "onset_amp": -13.78,
+      "offset_time": 29.188,
+      "offset_amp": 36.83
+     },
+     {
+      "onset_time": 34.328,
+      "onset_amp": 0.02,
+      "offset_time": 35.576,
+      "offset_amp": -73.13
+     },
+     {
+      "onset_time": 37.264,
+      "onset_amp": -45.51,
+      "offset_time": 37.464,
+      "offset_amp": -18.18
+     },
+     {
+      "onset_time": 38.504,
+      "onset_amp": 15.82,
+      "offset_time": 38.676,
+      "offset_amp": -38.15
+     },
+     {
+      "onset_time": 39.068,
+      "onset_amp": -20.26,
+      "offset_time": 39.648,
+      "offset_amp": 63.67
+     },
+     {
+      "onset_time": 44.784,
+      "onset_amp": 30.44,
+      "offset_time": 46.732,
+      "offset_amp": -153.89
+     },
+     {
+      "onset_time": 48.428,
+      "onset_amp": -157.6,
+      "offset_time": 50.18,
+      "offset_amp": 51.15
+     },
+     {
+      "onset_time": 49.696,
+      "onset_amp": -162.78,
+      "offset_time": 50.016,
+      "offset_amp": 78.44
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 1.64,
+      "onset_amp": -12.05,
+      "offset_time": 1.86,
+      "offset_amp": -57.78
+     },
+     {
+      "onset_time": 2.304,
+      "onset_amp": -50.44,
+      "offset_time": 2.904,
+      "offset_amp": 46.62
+     },
+     {
+      "onset_time": 8.828,
+      "onset_amp": 21.54,
+      "offset_time": 9.02,
+      "offset_amp": -0.16
+     },
+     {
+      "onset_time": 14.464,
+      "onset_amp": -15.22,
+      "offset_time": 14.7,
+      "offset_amp": 15.45
+     },
+     {
+      "onset_time": 18.9,
+      "onset_amp": 33.34,
+      "offset_time": 19.248,
+      "offset_amp": 53.48
+     },
+     {
+      "onset_time": 24.364,
+      "onset_amp": 50.65,
+      "offset_time": 24.592,
+      "offset_amp": 22.89
+     },
+     {
+      "onset_time": 28.94,
+      "onset_amp": -31.54,
+      "offset_time": 29.22,
+      "offset_amp": -8.48
+     },
+     {
+      "onset_time": 34.356,
+      "onset_amp": -28.59,
+      "offset_time": 35.712,
+      "offset_amp": -96.06
+     },
+     {
+      "onset_time": 37.276,
+      "onset_amp": -78.62,
+      "offset_time": 37.536,
+      "offset_amp": -46.21
+     },
+     {
+      "onset_time": 38.5,
+      "onset_amp": -24.73,
+      "offset_time": 39.68,
+      "offset_amp": 16.52
+     },
+     {
+      "onset_time": 38.98,
+      "onset_amp": -94.69,
+      "offset_time": 39.476,
+      "offset_amp": 36.81
+     },
+     {
+      "onset_time": 44.764,
+      "onset_amp": 5.87,
+      "offset_time": 46.692,
+      "offset_amp": -163.94
+     },
+     {
+      "onset_time": 47.44,
+      "onset_amp": -153.05,
+      "offset_time": 47.6,
+      "offset_amp": -129.73
+     },
+     {
+      "onset_time": 48.4,
+      "onset_amp": -143.68,
+      "offset_time": 49.924,
+      "offset_amp": 52.22
+     },
+     {
+      "onset_time": 49.636,
+      "onset_amp": -120.2,
+      "offset_time": 50.008,
+      "offset_amp": 79.02
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 1.64,
+      "onset_amp": -12.18,
+      "offset_time": 1.836,
+      "offset_amp": -69.06
+     },
+     {
+      "onset_time": 2.388,
+      "onset_amp": -64.46,
+      "offset_time": 2.82,
+      "offset_amp": 25.38
+     },
+     {
+      "onset_time": 9.432,
+      "onset_amp": -25.43,
+      "offset_time": 9.488,
+      "offset_amp": -17.08
+     },
+     {
+      "onset_time": 14.04,
+      "onset_amp": -22.71,
+      "offset_time": 14.42,
+      "offset_amp": -88.93
+     },
+     {
+      "onset_time": 18.94,
+      "onset_amp": -43.11,
+      "offset_time": 19.336,
+      "offset_amp": -12.27
+     },
+     {
+      "onset_time": 23.832,
+      "onset_amp": 6.53,
+      "offset_time": 24.072,
+      "offset_amp": -19.44
+     },
+     {
+      "onset_time": 29.032,
+      "onset_amp": -5.11,
+      "offset_time": 29.6,
+      "offset_amp": 47.28
+     },
+     {
+      "onset_time": 34.34,
+      "onset_amp": 49.23,
+      "offset_time": 35.608,
+      "offset_amp": -49.68
+     },
+     {
+      "onset_time": 37.308,
+      "onset_amp": -14.78,
+      "offset_time": 37.504,
+      "offset_amp": 11.29
+     },
+     {
+      "onset_time": 38.54,
+      "onset_amp": 6.04,
+      "offset_time": 39.376,
+      "offset_amp": 42.9
+     },
+     {
+      "onset_time": 39.788,
+      "onset_amp": 53.99,
+      "offset_time": 40.0,
+      "offset_amp": 76.39
+     },
+     {
+      "onset_time": 44.5,
+      "onset_amp": 33.14,
+      "offset_time": 46.624,
+      "offset_amp": -84.76
+     },
+     {
+      "onset_time": 48.972,
+      "onset_amp": -79.59,
+      "offset_time": 50.296,
+      "offset_amp": 47.87
+     },
+     {
+      "onset_time": 50.804,
+      "onset_amp": 71.48,
+      "offset_time": 50.896,
+      "offset_amp": 84.18
+     },
+     {
+      "onset_time": 54.804,
+      "onset_amp": 45.52,
+      "offset_time": 55.88,
+      "offset_amp": -29.36
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 14.12,
+      "onset_amp": -40.07,
+      "offset_time": 14.336,
+      "offset_amp": -48.59
+     },
+     {
+      "onset_time": 19.628,
+      "onset_amp": -22.04,
+      "offset_time": 19.824,
+      "offset_amp": 27.83
+     },
+     {
+      "onset_time": 24.944,
+      "onset_amp": -14.66,
+      "offset_time": 25.144,
+      "offset_amp": -35.59
+     },
+     {
+      "onset_time": 28.916,
+      "onset_amp": -21.96,
+      "offset_time": 29.252,
+      "offset_amp": 0.76
+     },
+     {
+      "onset_time": 34.128,
+      "onset_amp": 2.0,
+      "offset_time": 34.46,
+      "offset_amp": -42.03
+     },
+     {
+      "onset_time": 34.796,
+      "onset_amp": -15.73,
+      "offset_time": 35.492,
+      "offset_amp": -12.1
+     },
+     {
+      "onset_time": 37.348,
+      "onset_amp": 11.65,
+      "offset_time": 37.484,
+      "offset_amp": 30.09
+     },
+     {
+      "onset_time": 38.488,
+      "onset_amp": 39.89,
+      "offset_time": 39.276,
+      "offset_amp": 59.46
+     },
+     {
+      "onset_time": 38.732,
+      "onset_amp": -7.25,
+      "offset_time": 39.316,
+      "offset_amp": 62.01
+     },
+     {
+      "onset_time": 45.592,
+      "onset_amp": 10.62,
+      "offset_time": 46.044,
+      "offset_amp": -96.78
+     },
+     {
+      "onset_time": 48.996,
+      "onset_amp": 5.77,
+      "offset_time": 50.628,
+      "offset_amp": 55.8
+     },
+     {
+      "onset_time": 50.544,
+      "onset_amp": 31.32,
+      "offset_time": 50.692,
+      "offset_amp": 59.37
+     },
+     {
+      "onset_time": 54.86,
+      "onset_amp": 42.27,
+      "offset_time": 55.34,
+      "offset_amp": -15.15
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 8.84,
+      "onset_amp": 10.12,
+      "offset_time": 8.964,
+      "offset_amp": -1.53
+     },
+     {
+      "onset_time": 12.972,
+      "onset_amp": 18.52,
+      "offset_time": 13.652,
+      "offset_amp": 3.29
+     },
+     {
+      "onset_time": 18.92,
+      "onset_amp": 34.15,
+      "offset_time": 19.292,
+      "offset_amp": 51.73
+     },
+     {
+      "onset_time": 24.852,
+      "onset_amp": 45.73,
+      "offset_time": 25.06,
+      "offset_amp": 25.14
+     },
+     {
+      "onset_time": 28.892,
+      "onset_amp": -5.12,
+      "offset_time": 29.228,
+      "offset_amp": 12.04
+     },
+     {
+      "onset_time": 34.752,
+      "onset_amp": -56.98,
+      "offset_time": 34.952,
+      "offset_amp": -107.3
+     },
+     {
+      "onset_time": 37.336,
+      "onset_amp": -66.34,
+      "offset_time": 37.476,
+      "offset_amp": -52.15
+     },
+     {
+      "onset_time": 38.504,
+      "onset_amp": -29.31,
+      "offset_time": 39.256,
+      "offset_amp": -9.41
+     },
+     {
+      "onset_time": 38.96,
+      "onset_amp": -47.1,
+      "offset_time": 39.312,
+      "offset_amp": -6.69
+     },
+     {
+      "onset_time": 45.492,
+      "onset_amp": 24.45,
+      "offset_time": 46.068,
+      "offset_amp": -105.34
+     },
+     {
+      "onset_time": 49.764,
+      "onset_amp": -27.53,
+      "offset_time": 50.016,
+      "offset_amp": 22.81
+     },
+     {
+      "onset_time": 54.936,
+      "onset_amp": 43.84,
+      "offset_time": 55.5,
+      "offset_amp": 14.66
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 14.08,
+      "onset_amp": 33.38,
+      "offset_time": 14.444,
+      "offset_amp": 15.27
+     },
+     {
+      "onset_time": 18.944,
+      "onset_amp": 40.72,
+      "offset_time": 19.732,
+      "offset_amp": 73.03
+     },
+     {
+      "onset_time": 24.744,
+      "onset_amp": 16.35,
+      "offset_time": 24.98,
+      "offset_amp": -9.53
+     },
+     {
+      "onset_time": 29.08,
+      "onset_amp": -85.8,
+      "offset_time": 29.284,
+      "offset_amp": -73.83
+     },
+     {
+      "onset_time": 34.764,
+      "onset_amp": -93.24,
+      "offset_time": 34.924,
+      "offset_amp": -117.65
+     },
+     {
+      "onset_time": 38.728,
+      "onset_amp": -56.52,
+      "offset_time": 39.308,
+      "offset_amp": 8.8
+     },
+     {
+      "onset_time": 44.252,
+      "onset_amp": -42.6,
+      "offset_time": 46.708,
+      "offset_amp": 12.1
+     },
+     {
+      "onset_time": 45.5,
+      "onset_amp": 22.6,
+      "offset_time": 46.056,
+      "offset_amp": -80.47
+     },
+     {
+      "onset_time": 47.056,
+      "onset_amp": -1.52,
+      "offset_time": 47.2,
+      "offset_amp": -18.46
+     },
+     {
+      "onset_time": 49.0,
+      "onset_amp": 11.28,
+      "offset_time": 50.308,
+      "offset_amp": 52.95
+     },
+     {
+      "onset_time": 49.796,
+      "onset_amp": 15.14,
+      "offset_time": 50.124,
+      "offset_amp": 45.57
+     },
+     {
+      "onset_time": 54.912,
+      "onset_amp": 81.82,
+      "offset_time": 55.432,
+      "offset_amp": 34.46
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 2.288,
+      "onset_amp": -104.96,
+      "offset_time": 2.896,
+      "offset_amp": -45.74
+     },
+     {
+      "onset_time": 9.388,
+      "onset_amp": -4.57,
+      "offset_time": 9.548,
+      "offset_amp": 17.69
+     },
+     {
+      "onset_time": 14.236,
+      "onset_amp": -3.25,
+      "offset_time": 14.456,
+      "offset_amp": -20.63
+     },
+     {
+      "onset_time": 19.164,
+      "onset_amp": 42.39,
+      "offset_time": 19.644,
+      "offset_amp": 88.27
+     },
+     {
+      "onset_time": 23.964,
+      "onset_amp": 59.78,
+      "offset_time": 24.952,
+      "offset_amp": 27.52
+     },
+     {
+      "onset_time": 29.1,
+      "onset_amp": -11.93,
+      "offset_time": 29.308,
+      "offset_amp": 1.68
+     },
+     {
+      "onset_time": 34.304,
+      "onset_amp": 3.92,
+      "offset_time": 34.608,
+      "offset_amp": -38.78
+     },
+     {
+      "onset_time": 38.744,
+      "onset_amp": -32.58,
+      "offset_time": 39.256,
+      "offset_amp": 19.73
+     },
+     {
+      "onset_time": 44.492,
+      "onset_amp": -9.5,
+      "offset_time": 47.196,
+      "offset_amp": -47.04
+     },
+     {
+      "onset_time": 50.28,
+      "onset_amp": -42.02,
+      "offset_time": 50.404,
+      "offset_amp": -20.12
+     },
+     {
+      "onset_time": 54.872,
+      "onset_amp": 26.37,
+      "offset_time": 55.076,
+      "offset_amp": -6.38
+     }
+    ]
+   }
+  }
+ },
+ "(02.19_15)김상백_1": {
+  "f1": {
+   "auto_offset": -0.348,
+   "residual": -0.1,
+   "corrected_offset": -0.448,
+   "method": "grf-edge-align (3/10, med=+0.06s)",
+   "anchors": [
+    14.468,
+    18.604,
+    24.288,
+    29.18,
+    34.436,
+    39.712,
+    44.82,
+    49.612
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 2.904,
+      "onset_amp": -58.21,
+      "offset_time": 4.016,
+      "offset_amp": 16.59
+     },
+     {
+      "onset_time": 9.764,
+      "onset_amp": -8.46,
+      "offset_time": 10.368,
+      "offset_amp": -58.19
+     },
+     {
+      "onset_time": 12.568,
+      "onset_amp": -47.46,
+      "offset_time": 12.812,
+      "offset_amp": -19.3
+     },
+     {
+      "onset_time": 14.408,
+      "onset_amp": -14.83,
+      "offset_time": 14.908,
+      "offset_amp": -36.43
+     },
+     {
+      "onset_time": 17.628,
+      "onset_amp": -27.35,
+      "offset_time": 19.132,
+      "offset_amp": 126.2
+     },
+     {
+      "onset_time": 17.764,
+      "onset_amp": -18.97,
+      "offset_time": 19.464,
+      "offset_amp": 97.52
+     },
+     {
+      "onset_time": 24.136,
+      "onset_amp": 63.5,
+      "offset_time": 24.972,
+      "offset_amp": 23.99
+     },
+     {
+      "onset_time": 29.824,
+      "onset_amp": 30.91,
+      "offset_time": 29.936,
+      "offset_amp": 47.88
+     },
+     {
+      "onset_time": 34.348,
+      "onset_amp": -27.56,
+      "offset_time": 34.668,
+      "offset_amp": -50.25
+     },
+     {
+      "onset_time": 39.74,
+      "onset_amp": 30.57,
+      "offset_time": 39.976,
+      "offset_amp": 59.52
+     },
+     {
+      "onset_time": 44.716,
+      "onset_amp": -46.51,
+      "offset_time": 44.972,
+      "offset_amp": -63.57
+     },
+     {
+      "onset_time": 50.14,
+      "onset_amp": 39.6,
+      "offset_time": 50.28,
+      "offset_amp": 64.59
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 2.76,
+      "onset_amp": -95.03,
+      "offset_time": 4.068,
+      "offset_amp": -43.66
+     },
+     {
+      "onset_time": 12.452,
+      "onset_amp": -29.82,
+      "offset_time": 12.796,
+      "offset_amp": -2.24
+     },
+     {
+      "onset_time": 14.58,
+      "onset_amp": 6.72,
+      "offset_time": 14.732,
+      "offset_amp": -14.96
+     },
+     {
+      "onset_time": 17.768,
+      "onset_amp": 58.14,
+      "offset_time": 19.392,
+      "offset_amp": 150.53
+     },
+     {
+      "onset_time": 19.356,
+      "onset_amp": 150.52,
+      "offset_time": 19.48,
+      "offset_amp": 163.6
+     },
+     {
+      "onset_time": 24.152,
+      "onset_amp": 102.06,
+      "offset_time": 25.004,
+      "offset_amp": 49.51
+     },
+     {
+      "onset_time": 29.824,
+      "onset_amp": -16.86,
+      "offset_time": 29.948,
+      "offset_amp": 2.6
+     },
+     {
+      "onset_time": 34.416,
+      "onset_amp": -15.86,
+      "offset_time": 35.396,
+      "offset_amp": -85.55
+     },
+     {
+      "onset_time": 39.508,
+      "onset_amp": -27.35,
+      "offset_time": 40.776,
+      "offset_amp": 22.23
+     },
+     {
+      "onset_time": 44.98,
+      "onset_amp": -13.38,
+      "offset_time": 45.676,
+      "offset_amp": -133.36
+     },
+     {
+      "onset_time": 46.372,
+      "onset_amp": -144.02,
+      "offset_time": 46.56,
+      "offset_amp": -120.83
+     },
+     {
+      "onset_time": 49.148,
+      "onset_amp": -35.01,
+      "offset_time": 50.448,
+      "offset_amp": 9.06
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 2.832,
+      "onset_amp": -62.55,
+      "offset_time": 4.056,
+      "offset_amp": -30.01
+     },
+     {
+      "onset_time": 11.932,
+      "onset_amp": -52.97,
+      "offset_time": 12.716,
+      "offset_amp": 4.68
+     },
+     {
+      "onset_time": 14.368,
+      "onset_amp": 1.98,
+      "offset_time": 15.088,
+      "offset_amp": -25.06
+     },
+     {
+      "onset_time": 19.364,
+      "onset_amp": 40.98,
+      "offset_time": 19.48,
+      "offset_amp": 51.04
+     },
+     {
+      "onset_time": 22.536,
+      "onset_amp": 73.72,
+      "offset_time": 22.932,
+      "offset_amp": 105.05
+     },
+     {
+      "onset_time": 24.124,
+      "onset_amp": 115.39,
+      "offset_time": 25.036,
+      "offset_amp": 84.68
+     },
+     {
+      "onset_time": 29.828,
+      "onset_amp": 41.93,
+      "offset_time": 29.948,
+      "offset_amp": 61.24
+     },
+     {
+      "onset_time": 34.412,
+      "onset_amp": 40.42,
+      "offset_time": 34.94,
+      "offset_amp": -0.87
+     },
+     {
+      "onset_time": 39.744,
+      "onset_amp": -14.57,
+      "offset_time": 39.948,
+      "offset_amp": 25.39
+     },
+     {
+      "onset_time": 44.968,
+      "onset_amp": -10.09,
+      "offset_time": 46.268,
+      "offset_amp": -73.2
+     },
+     {
+      "onset_time": 49.328,
+      "onset_amp": -19.18,
+      "offset_time": 50.44,
+      "offset_amp": -0.62
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 14.172,
+      "onset_amp": -74.47,
+      "offset_time": 15.348,
+      "offset_amp": -120.08
+     },
+     {
+      "onset_time": 18.96,
+      "onset_amp": 2.7,
+      "offset_time": 19.144,
+      "offset_amp": 41.73
+     },
+     {
+      "onset_time": 24.392,
+      "onset_amp": 65.9,
+      "offset_time": 24.56,
+      "offset_amp": -0.58
+     },
+     {
+      "onset_time": 29.312,
+      "onset_amp": 32.44,
+      "offset_time": 29.644,
+      "offset_amp": 77.03
+     },
+     {
+      "onset_time": 34.476,
+      "onset_amp": 33.1,
+      "offset_time": 35.06,
+      "offset_amp": 7.53
+     },
+     {
+      "onset_time": 39.584,
+      "onset_amp": -42.34,
+      "offset_time": 41.108,
+      "offset_amp": -15.52
+     },
+     {
+      "onset_time": 44.852,
+      "onset_amp": -10.1,
+      "offset_time": 45.152,
+      "offset_amp": -47.82
+     },
+     {
+      "onset_time": 50.104,
+      "onset_amp": -14.77,
+      "offset_time": 50.276,
+      "offset_amp": 31.05
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 2.864,
+      "onset_amp": 115.03,
+      "offset_time": 3.976,
+      "offset_amp": 60.15
+     },
+     {
+      "onset_time": 14.592,
+      "onset_amp": -15.04,
+      "offset_time": 14.748,
+      "offset_amp": -45.97
+     },
+     {
+      "onset_time": 19.336,
+      "onset_amp": -27.01,
+      "offset_time": 19.452,
+      "offset_amp": -14.39
+     },
+     {
+      "onset_time": 24.128,
+      "onset_amp": 2.87,
+      "offset_time": 24.912,
+      "offset_amp": -57.84
+     },
+     {
+      "onset_time": 29.364,
+      "onset_amp": -93.14,
+      "offset_time": 29.64,
+      "offset_amp": -60.65
+     },
+     {
+      "onset_time": 34.556,
+      "onset_amp": -32.76,
+      "offset_time": 35.22,
+      "offset_amp": -63.87
+     },
+     {
+      "onset_time": 40.124,
+      "onset_amp": -34.52,
+      "offset_time": 40.332,
+      "offset_amp": -10.03
+     },
+     {
+      "onset_time": 44.94,
+      "onset_amp": -19.87,
+      "offset_time": 45.148,
+      "offset_amp": -50.13
+     },
+     {
+      "onset_time": 48.668,
+      "onset_amp": 25.31,
+      "offset_time": 50.896,
+      "offset_amp": 72.46
+     },
+     {
+      "onset_time": 50.164,
+      "onset_amp": 37.81,
+      "offset_time": 50.32,
+      "offset_amp": 70.75
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 12.132,
+      "onset_amp": -18.13,
+      "offset_time": 13.072,
+      "offset_amp": 63.58
+     },
+     {
+      "onset_time": 14.448,
+      "onset_amp": 107.21,
+      "offset_time": 15.072,
+      "offset_amp": 86.47
+     },
+     {
+      "onset_time": 19.04,
+      "onset_amp": 89.88,
+      "offset_time": 19.576,
+      "offset_amp": 101.06
+     },
+     {
+      "onset_time": 22.176,
+      "onset_amp": 125.42,
+      "offset_time": 22.344,
+      "offset_amp": 140.09
+     },
+     {
+      "onset_time": 24.212,
+      "onset_amp": 145.44,
+      "offset_time": 25.752,
+      "offset_amp": 18.24
+     },
+     {
+      "onset_time": 29.82,
+      "onset_amp": -37.16,
+      "offset_time": 29.94,
+      "offset_amp": -21.59
+     },
+     {
+      "onset_time": 34.564,
+      "onset_amp": -29.93,
+      "offset_time": 35.22,
+      "offset_amp": -92.03
+     },
+     {
+      "onset_time": 40.196,
+      "onset_amp": -56.5,
+      "offset_time": 40.368,
+      "offset_amp": -25.56
+     },
+     {
+      "onset_time": 44.952,
+      "onset_amp": -12.99,
+      "offset_time": 45.776,
+      "offset_amp": -62.77
+     },
+     {
+      "onset_time": 48.876,
+      "onset_amp": 8.91,
+      "offset_time": 50.34,
+      "offset_amp": 43.89
+     },
+     {
+      "onset_time": 50.172,
+      "onset_amp": 4.95,
+      "offset_time": 50.34,
+      "offset_amp": 35.79
+     },
+     {
+      "onset_time": 54.968,
+      "onset_amp": 43.14,
+      "offset_time": 55.504,
+      "offset_amp": 8.0
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 2.676,
+      "onset_amp": 38.3,
+      "offset_time": 4.196,
+      "offset_amp": 23.63
+     },
+     {
+      "onset_time": 14.612,
+      "onset_amp": -37.2,
+      "offset_time": 14.736,
+      "offset_amp": -58.81
+     },
+     {
+      "onset_time": 19.332,
+      "onset_amp": -19.63,
+      "offset_time": 19.44,
+      "offset_amp": -8.7
+     },
+     {
+      "onset_time": 24.736,
+      "onset_amp": 35.29,
+      "offset_time": 24.896,
+      "offset_amp": -16.85
+     },
+     {
+      "onset_time": 29.34,
+      "onset_amp": -35.51,
+      "offset_time": 29.648,
+      "offset_amp": -0.16
+     },
+     {
+      "onset_time": 34.548,
+      "onset_amp": -14.72,
+      "offset_time": 34.716,
+      "offset_amp": -42.78
+     },
+     {
+      "onset_time": 40.2,
+      "onset_amp": -24.65,
+      "offset_time": 40.332,
+      "offset_amp": -11.21
+     },
+     {
+      "onset_time": 44.82,
+      "onset_amp": -28.93,
+      "offset_time": 45.62,
+      "offset_amp": -7.17
+     },
+     {
+      "onset_time": 44.932,
+      "onset_amp": -25.43,
+      "offset_time": 45.112,
+      "offset_amp": -50.04
+     },
+     {
+      "onset_time": 50.192,
+      "onset_amp": 27.03,
+      "offset_time": 50.332,
+      "offset_amp": 48.77
+     },
+     {
+      "onset_time": 54.772,
+      "onset_amp": 20.75,
+      "offset_time": 55.572,
+      "offset_amp": -0.51
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 2.9,
+      "onset_amp": -0.41,
+      "offset_time": 4.076,
+      "offset_amp": -20.97
+     },
+     {
+      "onset_time": 12.024,
+      "onset_amp": -7.23,
+      "offset_time": 12.252,
+      "offset_amp": 14.88
+     },
+     {
+      "onset_time": 14.324,
+      "onset_amp": 63.43,
+      "offset_time": 15.04,
+      "offset_amp": 20.14
+     },
+     {
+      "onset_time": 18.892,
+      "onset_amp": 83.6,
+      "offset_time": 19.172,
+      "offset_amp": 104.77
+     },
+     {
+      "onset_time": 24.156,
+      "onset_amp": 11.62,
+      "offset_time": 24.98,
+      "offset_amp": -14.46
+     },
+     {
+      "onset_time": 29.472,
+      "onset_amp": -26.21,
+      "offset_time": 29.652,
+      "offset_amp": -2.45
+     },
+     {
+      "onset_time": 34.552,
+      "onset_amp": -27.85,
+      "offset_time": 34.724,
+      "offset_amp": -60.38
+     },
+     {
+      "onset_time": 40.192,
+      "onset_amp": -49.48,
+      "offset_time": 40.352,
+      "offset_amp": -28.44
+     },
+     {
+      "onset_time": 44.808,
+      "onset_amp": -48.54,
+      "offset_time": 45.624,
+      "offset_amp": 0.64
+     },
+     {
+      "onset_time": 44.932,
+      "onset_amp": -42.12,
+      "offset_time": 45.108,
+      "offset_amp": -67.76
+     },
+     {
+      "onset_time": 50.176,
+      "onset_amp": -5.26,
+      "offset_time": 50.344,
+      "offset_amp": 27.82
+     },
+     {
+      "onset_time": 54.808,
+      "onset_amp": 15.47,
+      "offset_time": 55.492,
+      "offset_amp": -6.26
+     }
+    ]
+   }
+  }
+ },
+ "(02.25_10)이채현_2": {
+  "f7": {
+   "auto_offset": 0.488,
+   "residual": -0.5,
+   "corrected_offset": -0.012,
+   "method": "grf-edge-align (4/10, med=+0.14s)",
+   "anchors": [
+    13.88,
+    18.712,
+    24.16,
+    28.672,
+    34.188,
+    39.052,
+    44.224,
+    49.088
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 1.228,
+      "onset_amp": -136.6,
+      "offset_time": 1.644,
+      "offset_amp": -97.08
+     },
+     {
+      "onset_time": 2.624,
+      "onset_amp": -70.06,
+      "offset_time": 2.756,
+      "offset_amp": -54.56
+     },
+     {
+      "onset_time": 13.876,
+      "onset_amp": -5.64,
+      "offset_time": 14.048,
+      "offset_amp": 20.78
+     },
+     {
+      "onset_time": 19.096,
+      "onset_amp": 124.41,
+      "offset_time": 19.24,
+      "offset_amp": 104.55
+     },
+     {
+      "onset_time": 23.848,
+      "onset_amp": 90.01,
+      "offset_time": 24.368,
+      "offset_amp": 56.48
+     },
+     {
+      "onset_time": 28.732,
+      "onset_amp": 48.47,
+      "offset_time": 29.024,
+      "offset_amp": 64.68
+     },
+     {
+      "onset_time": 29.188,
+      "onset_amp": 56.01,
+      "offset_time": 29.444,
+      "offset_amp": 20.17
+     },
+     {
+      "onset_time": 33.92,
+      "onset_amp": 7.62,
+      "offset_time": 34.576,
+      "offset_amp": -92.45
+     },
+     {
+      "onset_time": 35.496,
+      "onset_amp": -43.0,
+      "offset_time": 35.68,
+      "offset_amp": -23.51
+     },
+     {
+      "onset_time": 38.396,
+      "onset_amp": -55.5,
+      "offset_time": 39.016,
+      "offset_amp": 50.84
+     },
+     {
+      "onset_time": 44.236,
+      "onset_amp": 14.16,
+      "offset_time": 44.584,
+      "offset_amp": -130.15
+     },
+     {
+      "onset_time": 48.436,
+      "onset_amp": -169.43,
+      "offset_time": 49.044,
+      "offset_amp": 15.54
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 1.208,
+      "onset_amp": -93.01,
+      "offset_time": 1.724,
+      "offset_amp": -40.39
+     },
+     {
+      "onset_time": 13.9,
+      "onset_amp": -6.06,
+      "offset_time": 14.1,
+      "offset_amp": 27.4
+     },
+     {
+      "onset_time": 18.916,
+      "onset_amp": 128.99,
+      "offset_time": 19.236,
+      "offset_amp": 84.24
+     },
+     {
+      "onset_time": 24.004,
+      "onset_amp": 59.35,
+      "offset_time": 24.892,
+      "offset_amp": 8.1
+     },
+     {
+      "onset_time": 28.62,
+      "onset_amp": 20.2,
+      "offset_time": 29.44,
+      "offset_amp": 61.31
+     },
+     {
+      "onset_time": 33.912,
+      "onset_amp": -0.82,
+      "offset_time": 35.752,
+      "offset_amp": -145.38
+     },
+     {
+      "onset_time": 38.216,
+      "onset_amp": -103.99,
+      "offset_time": 39.288,
+      "offset_amp": 48.06
+     },
+     {
+      "onset_time": 38.588,
+      "onset_amp": -123.93,
+      "offset_time": 39.096,
+      "offset_amp": 57.7
+     },
+     {
+      "onset_time": 44.228,
+      "onset_amp": 25.66,
+      "offset_time": 44.352,
+      "offset_amp": -240.72
+     },
+     {
+      "onset_time": 45.148,
+      "onset_amp": -277.44,
+      "offset_time": 45.328,
+      "offset_amp": -249.23
+     },
+     {
+      "onset_time": 48.288,
+      "onset_amp": -183.91,
+      "offset_time": 49.58,
+      "offset_amp": 23.3
+     },
+     {
+      "onset_time": 48.488,
+      "onset_amp": -262.0,
+      "offset_time": 49.144,
+      "offset_amp": 32.73
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 2.312,
+      "onset_amp": -7.9,
+      "offset_time": 2.88,
+      "offset_amp": 5.12
+     },
+     {
+      "onset_time": 8.172,
+      "onset_amp": 1.42,
+      "offset_time": 8.384,
+      "offset_amp": -28.25
+     },
+     {
+      "onset_time": 13.612,
+      "onset_amp": -12.62,
+      "offset_time": 13.852,
+      "offset_amp": -22.27
+     },
+     {
+      "onset_time": 23.968,
+      "onset_amp": 30.39,
+      "offset_time": 24.836,
+      "offset_amp": -23.49
+     },
+     {
+      "onset_time": 28.736,
+      "onset_amp": -31.66,
+      "offset_time": 29.056,
+      "offset_amp": 1.1
+     },
+     {
+      "onset_time": 34.092,
+      "onset_amp": -1.65,
+      "offset_time": 35.16,
+      "offset_amp": -68.0
+     },
+     {
+      "onset_time": 35.576,
+      "onset_amp": -51.19,
+      "offset_time": 35.748,
+      "offset_amp": -30.48
+     },
+     {
+      "onset_time": 38.42,
+      "onset_amp": -67.4,
+      "offset_time": 39.056,
+      "offset_amp": 40.44
+     },
+     {
+      "onset_time": 44.152,
+      "onset_amp": 49.02,
+      "offset_time": 44.388,
+      "offset_amp": -194.8
+     },
+     {
+      "onset_time": 48.164,
+      "onset_amp": 18.35,
+      "offset_time": 49.768,
+      "offset_amp": -7.85
+     },
+     {
+      "onset_time": 48.448,
+      "onset_amp": -123.66,
+      "offset_time": 48.792,
+      "offset_amp": -25.01
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 1.168,
+      "onset_amp": -24.16,
+      "offset_time": 1.288,
+      "offset_amp": -51.81
+     },
+     {
+      "onset_time": 2.224,
+      "onset_amp": -38.49,
+      "offset_time": 2.784,
+      "offset_amp": -13.41
+     },
+     {
+      "onset_time": 8.16,
+      "onset_amp": 7.95,
+      "offset_time": 8.332,
+      "offset_amp": -26.43
+     },
+     {
+      "onset_time": 13.636,
+      "onset_amp": -0.96,
+      "offset_time": 13.888,
+      "offset_amp": -38.01
+     },
+     {
+      "onset_time": 23.96,
+      "onset_amp": 11.19,
+      "offset_time": 24.184,
+      "offset_amp": -57.87
+     },
+     {
+      "onset_time": 34.104,
+      "onset_amp": -43.87,
+      "offset_time": 34.372,
+      "offset_amp": -141.4
+     },
+     {
+      "onset_time": 38.156,
+      "onset_amp": 15.31,
+      "offset_time": 39.3,
+      "offset_amp": -30.73
+     },
+     {
+      "onset_time": 38.4,
+      "onset_amp": -62.33,
+      "offset_time": 38.988,
+      "offset_amp": 25.8
+     },
+     {
+      "onset_time": 44.112,
+      "onset_amp": 7.59,
+      "offset_time": 45.092,
+      "offset_amp": 67.02
+     },
+     {
+      "onset_time": 44.16,
+      "onset_amp": -1.49,
+      "offset_time": 44.42,
+      "offset_amp": -106.7
+     },
+     {
+      "onset_time": 48.168,
+      "onset_amp": 56.28,
+      "offset_time": 49.772,
+      "offset_amp": -13.86
+     },
+     {
+      "onset_time": 48.444,
+      "onset_amp": -114.76,
+      "offset_time": 48.768,
+      "offset_amp": 13.87
+     },
+     {
+      "onset_time": 54.556,
+      "onset_amp": -11.81,
+      "offset_time": 55.36,
+      "offset_amp": -45.0
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 1.368,
+      "onset_amp": -82.68,
+      "offset_time": 1.516,
+      "offset_amp": -45.5
+     },
+     {
+      "onset_time": 2.204,
+      "onset_amp": -43.11,
+      "offset_time": 2.292,
+      "offset_amp": -24.65
+     },
+     {
+      "onset_time": 9.512,
+      "onset_amp": -17.39,
+      "offset_time": 9.644,
+      "offset_amp": 2.6
+     },
+     {
+      "onset_time": 23.952,
+      "onset_amp": 43.72,
+      "offset_time": 24.088,
+      "offset_amp": 28.76
+     },
+     {
+      "onset_time": 28.244,
+      "onset_amp": -55.51,
+      "offset_time": 28.428,
+      "offset_amp": -40.69
+     },
+     {
+      "onset_time": 34.172,
+      "onset_amp": -14.32,
+      "offset_time": 34.372,
+      "offset_amp": -59.74
+     },
+     {
+      "onset_time": 38.356,
+      "onset_amp": -88.78,
+      "offset_time": 38.988,
+      "offset_amp": -7.8
+     },
+     {
+      "onset_time": 42.06,
+      "onset_amp": -11.47,
+      "offset_time": 42.156,
+      "offset_amp": 1.94
+     },
+     {
+      "onset_time": 44.228,
+      "onset_amp": 26.25,
+      "offset_time": 44.44,
+      "offset_amp": -59.2
+     },
+     {
+      "onset_time": 48.196,
+      "onset_amp": 39.42,
+      "offset_time": 49.448,
+      "offset_amp": -56.77
+     },
+     {
+      "onset_time": 48.428,
+      "onset_amp": -57.38,
+      "offset_time": 48.756,
+      "offset_amp": 22.64
+     },
+     {
+      "onset_time": 54.892,
+      "onset_amp": 1.23,
+      "offset_time": 54.952,
+      "offset_amp": 9.35
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 1.228,
+      "onset_amp": -61.05,
+      "offset_time": 1.684,
+      "offset_amp": -16.84
+     },
+     {
+      "onset_time": 19.304,
+      "onset_amp": 65.16,
+      "offset_time": 19.476,
+      "offset_amp": 74.3
+     },
+     {
+      "onset_time": 23.976,
+      "onset_amp": 92.89,
+      "offset_time": 24.484,
+      "offset_amp": 46.97
+     },
+     {
+      "onset_time": 28.232,
+      "onset_amp": -29.79,
+      "offset_time": 29.088,
+      "offset_amp": 29.21
+     },
+     {
+      "onset_time": 34.156,
+      "onset_amp": 49.59,
+      "offset_time": 34.552,
+      "offset_amp": -38.66
+     },
+     {
+      "onset_time": 38.148,
+      "onset_amp": 1.37,
+      "offset_time": 39.292,
+      "offset_amp": 38.02
+     },
+     {
+      "onset_time": 38.384,
+      "onset_amp": -40.1,
+      "offset_time": 39.036,
+      "offset_amp": 60.6
+     },
+     {
+      "onset_time": 44.256,
+      "onset_amp": 26.15,
+      "offset_time": 44.404,
+      "offset_amp": -100.49
+     },
+     {
+      "onset_time": 48.196,
+      "onset_amp": -72.53,
+      "offset_time": 49.728,
+      "offset_amp": 11.22
+     },
+     {
+      "onset_time": 48.436,
+      "onset_amp": -159.3,
+      "offset_time": 49.08,
+      "offset_amp": 12.53
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 1.236,
+      "onset_amp": -71.41,
+      "offset_time": 1.868,
+      "offset_amp": -14.87
+     },
+     {
+      "onset_time": 9.468,
+      "onset_amp": -26.21,
+      "offset_time": 9.688,
+      "offset_amp": 8.69
+     },
+     {
+      "onset_time": 13.652,
+      "onset_amp": -2.28,
+      "offset_time": 13.872,
+      "offset_amp": -11.89
+     },
+     {
+      "onset_time": 23.96,
+      "onset_amp": 15.72,
+      "offset_time": 24.476,
+      "offset_amp": -25.48
+     },
+     {
+      "onset_time": 28.216,
+      "onset_amp": -43.6,
+      "offset_time": 28.448,
+      "offset_amp": -30.53
+     },
+     {
+      "onset_time": 34.224,
+      "onset_amp": -6.87,
+      "offset_time": 34.324,
+      "offset_amp": -50.75
+     },
+     {
+      "onset_time": 35.612,
+      "onset_amp": -31.99,
+      "offset_time": 35.672,
+      "offset_amp": -26.5
+     },
+     {
+      "onset_time": 38.356,
+      "onset_amp": -38.75,
+      "offset_time": 39.028,
+      "offset_amp": 40.19
+     },
+     {
+      "onset_time": 42.084,
+      "onset_amp": 48.71,
+      "offset_time": 42.14,
+      "offset_amp": 55.24
+     },
+     {
+      "onset_time": 44.004,
+      "onset_amp": 50.85,
+      "offset_time": 44.776,
+      "offset_amp": -23.14
+     },
+     {
+      "onset_time": 48.204,
+      "onset_amp": -8.9,
+      "offset_time": 49.768,
+      "offset_amp": 12.08
+     },
+     {
+      "onset_time": 48.44,
+      "onset_amp": -93.4,
+      "offset_time": 48.764,
+      "offset_amp": -12.72
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 1.264,
+      "onset_amp": -144.71,
+      "offset_time": 1.564,
+      "offset_amp": -105.85
+     },
+     {
+      "onset_time": 9.264,
+      "onset_amp": -77.32,
+      "offset_time": 9.62,
+      "offset_amp": -14.73
+     },
+     {
+      "onset_time": 13.62,
+      "onset_amp": 15.96,
+      "offset_time": 13.896,
+      "offset_amp": -1.2
+     },
+     {
+      "onset_time": 19.272,
+      "onset_amp": 87.68,
+      "offset_time": 19.496,
+      "offset_amp": 101.54
+     },
+     {
+      "onset_time": 23.964,
+      "onset_amp": 73.99,
+      "offset_time": 24.476,
+      "offset_amp": 37.72
+     },
+     {
+      "onset_time": 28.22,
+      "onset_amp": -10.23,
+      "offset_time": 28.408,
+      "offset_amp": 4.43
+     },
+     {
+      "onset_time": 34.152,
+      "onset_amp": 36.25,
+      "offset_time": 34.36,
+      "offset_amp": -8.16
+     },
+     {
+      "onset_time": 38.344,
+      "onset_amp": -8.23,
+      "offset_time": 38.7,
+      "offset_amp": 33.84
+     },
+     {
+      "onset_time": 44.216,
+      "onset_amp": 56.15,
+      "offset_time": 44.452,
+      "offset_amp": -12.75
+     },
+     {
+      "onset_time": 48.256,
+      "onset_amp": -34.94,
+      "offset_time": 49.148,
+      "offset_amp": -114.26
+     },
+     {
+      "onset_time": 49.644,
+      "onset_amp": -119.08,
+      "offset_time": 49.764,
+      "offset_amp": -94.87
+     },
+     {
+      "onset_time": 50.472,
+      "onset_amp": -78.72,
+      "offset_time": 50.536,
+      "offset_amp": -67.9
+     },
+     {
+      "onset_time": 54.676,
+      "onset_amp": -49.5,
+      "offset_time": 54.812,
+      "offset_amp": -74.08
+     }
+    ]
+   }
+  }
+ },
+ "(03.11_16)김가은_2": {
+  "f6": {
+   "auto_offset": -9.888,
+   "residual": 0.0,
+   "corrected_offset": -9.888,
+   "method": "large-offset review (edge-align=-10.29)",
+   "anchors": [
+    4.544,
+    8.956,
+    14.288,
+    19.52,
+    24.668,
+    29.616,
+    34.716,
+    40.768
+   ],
+   "channels": {
+    "1": [
+     {
+      "onset_time": 1.964,
+      "onset_amp": -179.69,
+      "offset_time": 3.92,
+      "offset_amp": -229.19
+     },
+     {
+      "onset_time": 8.604,
+      "onset_amp": -47.44,
+      "offset_time": 9.408,
+      "offset_amp": 60.56
+     },
+     {
+      "onset_time": 14.22,
+      "onset_amp": 137.99,
+      "offset_time": 14.628,
+      "offset_amp": 124.33
+     },
+     {
+      "onset_time": 23.908,
+      "onset_amp": 125.21,
+      "offset_time": 24.5,
+      "offset_amp": 28.3
+     },
+     {
+      "onset_time": 24.004,
+      "onset_amp": 116.99,
+      "offset_time": 24.42,
+      "offset_amp": 36.59
+     },
+     {
+      "onset_time": 29.188,
+      "onset_amp": -16.11,
+      "offset_time": 29.6,
+      "offset_amp": 40.79
+     },
+     {
+      "onset_time": 34.132,
+      "onset_amp": 19.93,
+      "offset_time": 34.544,
+      "offset_amp": -35.63
+     },
+     {
+      "onset_time": 34.2,
+      "onset_amp": 14.76,
+      "offset_time": 34.74,
+      "offset_amp": -41.29
+     },
+     {
+      "onset_time": 38.916,
+      "onset_amp": -65.93,
+      "offset_time": 39.568,
+      "offset_amp": -22.62
+     },
+     {
+      "onset_time": 44.288,
+      "onset_amp": -24.88,
+      "offset_time": 44.86,
+      "offset_amp": -81.84
+     }
+    ],
+    "2": [
+     {
+      "onset_time": 1.86,
+      "onset_amp": -316.54,
+      "offset_time": 4.052,
+      "offset_amp": -226.7
+     },
+     {
+      "onset_time": 8.608,
+      "onset_amp": -71.77,
+      "offset_time": 9.44,
+      "offset_amp": 75.97
+     },
+     {
+      "onset_time": 14.236,
+      "onset_amp": 202.3,
+      "offset_time": 14.604,
+      "offset_amp": 185.02
+     },
+     {
+      "onset_time": 23.944,
+      "onset_amp": 162.87,
+      "offset_time": 24.484,
+      "offset_amp": 29.92
+     },
+     {
+      "onset_time": 23.988,
+      "onset_amp": 157.52,
+      "offset_time": 24.404,
+      "offset_amp": 45.79
+     },
+     {
+      "onset_time": 29.176,
+      "onset_amp": -26.17,
+      "offset_time": 29.584,
+      "offset_amp": 59.78
+     },
+     {
+      "onset_time": 34.268,
+      "onset_amp": 33.79,
+      "offset_time": 34.784,
+      "offset_amp": -48.09
+     },
+     {
+      "onset_time": 38.58,
+      "onset_amp": -72.59,
+      "offset_time": 39.516,
+      "offset_amp": 14.97
+     },
+     {
+      "onset_time": 44.308,
+      "onset_amp": -41.66,
+      "offset_time": 45.412,
+      "offset_amp": -151.16
+     }
+    ],
+    "3": [
+     {
+      "onset_time": 1.816,
+      "onset_amp": -92.26,
+      "offset_time": 3.972,
+      "offset_amp": -125.98
+     },
+     {
+      "onset_time": 4.448,
+      "onset_amp": -118.47,
+      "offset_time": 4.904,
+      "offset_amp": -127.99
+     },
+     {
+      "onset_time": 8.632,
+      "onset_amp": -92.53,
+      "offset_time": 9.376,
+      "offset_amp": 10.51
+     },
+     {
+      "onset_time": 14.2,
+      "onset_amp": 108.67,
+      "offset_time": 14.62,
+      "offset_amp": 90.65
+     },
+     {
+      "onset_time": 23.932,
+      "onset_amp": 71.25,
+      "offset_time": 24.488,
+      "offset_amp": -36.53
+     },
+     {
+      "onset_time": 24.024,
+      "onset_amp": 62.6,
+      "offset_time": 24.404,
+      "offset_amp": -24.48
+     },
+     {
+      "onset_time": 29.164,
+      "onset_amp": -52.61,
+      "offset_time": 29.62,
+      "offset_amp": 27.24
+     },
+     {
+      "onset_time": 34.288,
+      "onset_amp": 31.55,
+      "offset_time": 34.792,
+      "offset_amp": -49.0
+     },
+     {
+      "onset_time": 38.652,
+      "onset_amp": -54.92,
+      "offset_time": 39.596,
+      "offset_amp": 66.36
+     },
+     {
+      "onset_time": 44.316,
+      "onset_amp": 28.22,
+      "offset_time": 45.532,
+      "offset_amp": -120.26
+     }
+    ],
+    "4": [
+     {
+      "onset_time": 2.668,
+      "onset_amp": -165.09,
+      "offset_time": 2.876,
+      "offset_amp": -134.18
+     },
+     {
+      "onset_time": 4.044,
+      "onset_amp": -147.17,
+      "offset_time": 6.168,
+      "offset_amp": -227.25
+     },
+     {
+      "onset_time": 8.948,
+      "onset_amp": -167.35,
+      "offset_time": 10.656,
+      "offset_amp": 16.58
+     },
+     {
+      "onset_time": 14.228,
+      "onset_amp": 200.69,
+      "offset_time": 14.616,
+      "offset_amp": 184.7
+     },
+     {
+      "onset_time": 20.508,
+      "onset_amp": 147.32,
+      "offset_time": 21.78,
+      "offset_amp": 180.97
+     },
+     {
+      "onset_time": 24.224,
+      "onset_amp": 170.32,
+      "offset_time": 24.428,
+      "offset_amp": 136.86
+     },
+     {
+      "onset_time": 29.848,
+      "onset_amp": 21.15,
+      "offset_time": 31.432,
+      "offset_amp": 89.48
+     },
+     {
+      "onset_time": 34.348,
+      "onset_amp": 91.1,
+      "offset_time": 34.508,
+      "offset_amp": 58.93
+     },
+     {
+      "onset_time": 39.176,
+      "onset_amp": -119.17,
+      "offset_time": 39.468,
+      "offset_amp": -74.45
+     },
+     {
+      "onset_time": 39.772,
+      "onset_amp": -69.38,
+      "offset_time": 41.46,
+      "offset_amp": 18.6
+     },
+     {
+      "onset_time": 44.316,
+      "onset_amp": 26.13,
+      "offset_time": 44.904,
+      "offset_amp": -75.15
+     }
+    ],
+    "5": [
+     {
+      "onset_time": 2.128,
+      "onset_amp": -10.02,
+      "offset_time": 3.644,
+      "offset_amp": -58.36
+     },
+     {
+      "onset_time": 8.648,
+      "onset_amp": -54.28,
+      "offset_time": 9.396,
+      "offset_amp": -1.1
+     },
+     {
+      "onset_time": 14.244,
+      "onset_amp": 66.4,
+      "offset_time": 14.472,
+      "offset_amp": 37.48
+     },
+     {
+      "onset_time": 23.62,
+      "onset_amp": 80.56,
+      "offset_time": 24.44,
+      "offset_amp": 8.68
+     },
+     {
+      "onset_time": 24.252,
+      "onset_amp": 42.66,
+      "offset_time": 24.516,
+      "offset_amp": 4.53
+     },
+     {
+      "onset_time": 28.904,
+      "onset_amp": -72.77,
+      "offset_time": 29.948,
+      "offset_amp": -11.46
+     },
+     {
+      "onset_time": 29.12,
+      "onset_amp": -80.73,
+      "offset_time": 29.74,
+      "offset_amp": -19.26
+     },
+     {
+      "onset_time": 34.148,
+      "onset_amp": 21.05,
+      "offset_time": 35.004,
+      "offset_amp": -35.75
+     },
+     {
+      "onset_time": 34.164,
+      "onset_amp": 17.3,
+      "offset_time": 34.52,
+      "offset_amp": -52.24
+     },
+     {
+      "onset_time": 39.528,
+      "onset_amp": -8.14,
+      "offset_time": 39.944,
+      "offset_amp": 10.44
+     }
+    ],
+    "6": [
+     {
+      "onset_time": 2.096,
+      "onset_amp": -198.02,
+      "offset_time": 3.86,
+      "offset_amp": -185.95
+     },
+     {
+      "onset_time": 8.676,
+      "onset_amp": -81.78,
+      "offset_time": 10.288,
+      "offset_amp": 69.98
+     },
+     {
+      "onset_time": 14.276,
+      "onset_amp": 206.93,
+      "offset_time": 14.608,
+      "offset_amp": 197.49
+     },
+     {
+      "onset_time": 23.648,
+      "onset_amp": 100.34,
+      "offset_time": 24.404,
+      "offset_amp": 10.41
+     },
+     {
+      "onset_time": 24.164,
+      "onset_amp": 79.42,
+      "offset_time": 24.472,
+      "offset_amp": 2.52
+     },
+     {
+      "onset_time": 29.172,
+      "onset_amp": -73.28,
+      "offset_time": 29.528,
+      "offset_amp": -11.51
+     },
+     {
+      "onset_time": 34.324,
+      "onset_amp": 18.29,
+      "offset_time": 34.792,
+      "offset_amp": -9.45
+     }
+    ],
+    "7": [
+     {
+      "onset_time": 2.26,
+      "onset_amp": -197.94,
+      "offset_time": 3.452,
+      "offset_amp": -177.01
+     },
+     {
+      "onset_time": 3.84,
+      "onset_amp": -175.41,
+      "offset_time": 4.06,
+      "offset_amp": -160.79
+     },
+     {
+      "onset_time": 8.7,
+      "onset_amp": 2.9,
+      "offset_time": 9.444,
+      "offset_amp": 78.61
+     },
+     {
+      "onset_time": 14.256,
+      "onset_amp": 162.4,
+      "offset_time": 14.616,
+      "offset_amp": 144.65
+     },
+     {
+      "onset_time": 23.66,
+      "onset_amp": 88.65,
+      "offset_time": 24.424,
+      "offset_amp": 13.16
+     },
+     {
+      "onset_time": 23.852,
+      "onset_amp": 93.66,
+      "offset_time": 24.496,
+      "offset_amp": 8.62
+     },
+     {
+      "onset_time": 29.216,
+      "onset_amp": -74.03,
+      "offset_time": 29.636,
+      "offset_amp": -21.76
+     },
+     {
+      "onset_time": 34.184,
+      "onset_amp": 28.17,
+      "offset_time": 34.516,
+      "offset_amp": -18.36
+     }
+    ],
+    "8": [
+     {
+      "onset_time": 2.372,
+      "onset_amp": -236.49,
+      "offset_time": 2.796,
+      "offset_amp": -173.79
+     },
+     {
+      "onset_time": 4.396,
+      "onset_amp": -148.89,
+      "offset_time": 6.144,
+      "offset_amp": -198.5
+     },
+     {
+      "onset_time": 8.992,
+      "onset_amp": -180.81,
+      "offset_time": 10.992,
+      "offset_amp": 21.15
+     },
+     {
+      "onset_time": 14.248,
+      "onset_amp": 205.23,
+      "offset_time": 14.608,
+      "offset_amp": 192.21
+     },
+     {
+      "onset_time": 23.8,
+      "onset_amp": 195.46,
+      "offset_time": 24.452,
+      "offset_amp": 139.21
+     },
+     {
+      "onset_time": 23.908,
+      "onset_amp": 186.45,
+      "offset_time": 24.112,
+      "offset_amp": 159.49
+     },
+     {
+      "onset_time": 29.5,
+      "onset_amp": -23.51,
+      "offset_time": 29.608,
+      "offset_amp": -12.2
+     },
+     {
+      "onset_time": 34.24,
+      "onset_amp": 54.52,
+      "offset_time": 34.696,
+      "offset_amp": 19.92
+     },
+     {
+      "onset_time": 38.848,
+      "onset_amp": -36.16,
+      "offset_time": 39.316,
+      "offset_amp": -73.72
+     },
+     {
+      "onset_time": 40.104,
+      "onset_amp": -56.15,
+      "offset_time": 40.576,
+      "offset_amp": -40.47
+     }
+    ]
+   }
+  }
+ }
+}

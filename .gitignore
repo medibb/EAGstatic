@@ -42,11 +42,16 @@ result/*
 !result/manual_offsets.json
 !result/manual_edges.json
 !result/exclusions.json
-# 신뢰도 파일럿: 동결한 대상 목록만 추적 (rater 작업물·리포트는 제외).
+# 신뢰도 파일럿: 동결한 대상 목록과 자동 검출 스냅샷만 추적
+# (rater 작업물·리포트는 제외 — 그건 각자의 저장소에 쌓인다).
+# auto_baseline은 재생성이 가능하지만 재생성 시점의 코드·데이터에 따라 값이 달라진다.
+# §8.6(auto vs manual)이 "사람이 실제로 손댄 이벤트"를 가리는 근거로 삼는 원본이므로,
+# 파일럿 시작 시점의 것을 표본과 함께 동결해야 한다.
 # result/* 로 디렉터리 자체가 제외되므로 디렉터리를 먼저 되살려야 한다.
 !result/reliability/
 result/reliability/*
 !result/reliability/pilot_sessions.csv
+!result/reliability/auto_baseline.json
 results/
 
 # Synology NAS artifacts
