@@ -238,6 +238,141 @@ def cmd_rate(args):
     print(f"\n→ {OUT_DIR}/rate_vs_magnitude.txt")
 
 
+# ==================== grfrate ====================
+
+def _ramp_rate(t, f, t_start, t_end, f0, f1, lo=0.10, hi=0.90):
+    """10~90% 램프 속도. 전적으로 GRF에서만 나온다.
+
+    시작 plateau f0에서 끝 plateau f1로 넘어가는 구간의 10%·90% 통과 시각을 찾아
+    그 사이 기울기를 낸다. 문턱을 10/90으로 잡는 것은 plateau 근처의 잡음이
+    통과 시각을 크게 흔들기 때문이다.
+    """
+    d = f1 - f0
+    if not np.isfinite(d) or abs(d) < 1e-6:
+        return np.nan, np.nan
+    m = (t >= t_start) & (t <= t_end)
+    if m.sum() < 5:
+        return np.nan, np.nan
+    tt, ff = t[m], f[m]
+    # 진행 방향에 무관하게 0~1로 정규화
+    prog = (ff - f0) / d
+    i_lo = np.flatnonzero(prog >= lo)
+    if not len(i_lo):
+        return np.nan, np.nan
+    i_hi = np.flatnonzero(prog[i_lo[0]:] >= hi)
+    if not len(i_hi):
+        return np.nan, np.nan
+    t10, t90 = tt[i_lo[0]], tt[i_lo[0] + i_hi[0]]
+    dt = t90 - t10
+    if dt <= 0:
+        return np.nan, np.nan
+    return abs((hi - lo) * d) * 100.0 / dt, dt      # %BW/s, 램프 지속시간(s)
+
+
+def cmd_grfrate(args):
+    """**GRF에서만** 유도한 부하 변화 속도를 만들고, 크기와 분리해 진폭을 설명한다.
+
+    `rate` 서브커맨드의 속도 대리변수(load_pct/transition_time)는 transition_time을
+    통해 진폭과 구성상 결합돼 있어 음의 계수라는 인공물을 냈다. 여기서는 EAG를
+    전혀 쓰지 않는다. 검사측 하중분율 f(t) = 검사측힘/(좌+우) 를 만들고, 각 이벤트의
+    10~90% 램프 기울기를 속도로 쓴다.
+
+      streaming potential → 진폭이 **속도**(dε/dt)를 따라야 한다
+      고정전하밀도(FCD)   → 진폭이 **크기**(ε)를 따라야 한다
+    """
+    import pandas as pd
+    from sync_analyzer import find_session_pair, SyncAnalyzer
+    import grf_triggered_annotator as G
+    from offset_app import scan_sessions
+
+    p = pd.read_csv(PARAMS, low_memory=False)
+    p = p[(p['matched'] == True) & (p['accepted'] == True) & p['amplitude'].notna()]
+    keys = p[['subject', 'session']].drop_duplicates().values.tolist()
+    rng = np.random.default_rng(args.seed)
+    keys = [keys[i] for i in rng.permutation(len(keys))[:args.n]]
+    with _quiet():
+        allsess = {(s['subject'], s['session']): s['dir'] for s in scan_sessions()}
+
+    rows = []
+    for i, (subj, sess) in enumerate(keys, 1):
+        sdir = allsess.get((subj, sess))
+        if not sdir:
+            continue
+        print(f"[{i}/{len(keys)}] {subj} / {sess}", flush=True)
+        try:
+            pair = find_session_pair(sdir)
+            if pair is None:
+                continue
+            with _quiet():
+                sa = SyncAnalyzer(pair)
+                signed = G.signed_imbalance(sa.grf_left, sa.grf_right)
+                tg = sa.unified_time_grf
+                rest, cycles, _ = G.detect_load_cycles_expected(
+                    tg, signed, sa.grf_left, sa.grf_right)
+            L = np.asarray(sa.grf_left, float); R = np.asarray(sa.grf_right, float)
+            tot = L + R
+            for c in cycles:
+                if not np.isfinite(c.load_ratio) or not np.isfinite(c.rest_ratio):
+                    continue
+                test = R if c.test_side == 'R' else L
+                with np.errstate(invalid='ignore', divide='ignore'):
+                    f = np.where(tot > 1e-6, test / tot, np.nan)
+                r_on, d_on = _ramp_rate(tg, f, c.onset_time - 0.5, c.offset_time,
+                                        c.rest_ratio, c.load_ratio)
+                r_off, d_off = _ramp_rate(tg, f, c.offset_time - 0.5, c.end_time + 0.5,
+                                          c.load_ratio, c.rest_ratio)
+                for kind, rr, dd in (('on', r_on, d_on), ('off', r_off, d_off)):
+                    rows.append(dict(subject=subj, session=sess, cycle_id=c.cycle_id,
+                                     event_kind=kind, grf_rate=rr, grf_ramp_s=dd,
+                                     delta_pct=abs(c.load_ratio - c.rest_ratio) * 100.0,
+                                     load_pct=c.load_pct))
+        except Exception as e:
+            print(f"   실패: {type(e).__name__}: {e}")
+
+    if not rows:
+        raise SystemExit("램프를 하나도 못 구했다.")
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    g = pd.DataFrame(rows)
+    g.to_csv(OUT_DIR / 'grf_rate.csv', index=False)
+
+    d = p.merge(g, on=['subject', 'session', 'cycle_id', 'event_kind'],
+                how='inner', suffixes=('', '_grf'))
+    d = d[d.grf_rate.notna() & (d.grf_rate > 0)].copy()
+    d['absamp'] = d.amplitude.abs()
+    print(f"\n병합된 이벤트 {len(d)} · 피험자 {d.subject.nunique()} · 세션 {d.session.nunique()}")
+    print(f"GRF 램프 지속 (s): 중앙 {d.grf_ramp_s.median():.3f} · "
+          f"사분위 {d.grf_ramp_s.quantile(.25):.3f}~{d.grf_ramp_s.quantile(.75):.3f}")
+    print(f"GRF 속도 (%BW/s): 중앙 {d.grf_rate.median():.1f} · "
+          f"사분위 {d.grf_rate.quantile(.25):.1f}~{d.grf_rate.quantile(.75):.1f} "
+          f"· 변동계수 {d.grf_rate.std()/d.grf_rate.mean():.2f}")
+
+    r = np.corrcoef(d.delta_pct, d.grf_rate)[0, 1]
+    print(f"\n**크기(Δ%BW)와 속도(%BW/s)의 상관 r = {r:.3f}**")
+    print("  → " + ("공선성이 심하다. 분리 해석 금지." if abs(r) > 0.8 else "분리 가능."))
+
+    import statsmodels.formula.api as smf
+    for col in ('delta_pct', 'grf_rate', 'grf_ramp_s'):
+        d['z_' + col] = (d[col] - d[col].mean()) / d[col].std()
+    print("\n=== LMM: absamp ~ z_delta_pct + z_grf_rate + (1|subject) ===")
+    m = smf.mixedlm("absamp ~ z_delta_pct + z_grf_rate", d, groups=d['subject']).fit()
+    print(m.summary().tables[1])
+    b_mag = m.params.get('z_delta_pct', np.nan); b_rate = m.params.get('z_grf_rate', np.nan)
+    print(f"\n표준화 계수:  크기 {b_mag:+.2f} µV  ·  속도 {b_rate:+.2f} µV")
+    ratio = abs(b_mag) / abs(b_rate) if b_rate else np.inf
+    print(f"크기/속도 = {ratio:.2f}")
+    if ratio > 2:
+        print("→ **크기 우세**. 변형 자체에 의존 = FCD 기여가 크다는 쪽.")
+    elif ratio < 0.5:
+        print("→ **속도 우세**. 유동에 의존 = streaming 기여가 크다는 쪽.")
+    else:
+        print("→ 두 항이 비슷하다. 단일 기전으로 환원되지 않는다.")
+    print("\n⚠️ 속도가 크기와 강하게 얽혀 있으면(위 r 확인) 위 판정을 신뢰하지 말 것.")
+
+    with open(OUT_DIR / 'grf_rate_lmm.txt', 'w', encoding='utf-8') as f:
+        f.write(str(m.summary()))
+    print(f"\n→ {OUT_DIR}/grf_rate.csv · {OUT_DIR}/grf_rate_lmm.txt")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -250,8 +385,13 @@ def main():
     p.add_argument('--raw', action='store_true', help='detrend 없이')
     p.set_defaults(func=cmd_hold)
 
-    p = sub.add_parser('rate', help='크기 대 속도 판별')
+    p = sub.add_parser('rate', help='크기 대 속도 판별 (EAG 유래 속도 — 오염됨, 참고용)')
     p.set_defaults(func=cmd_rate)
+
+    p = sub.add_parser('grfrate', help='크기 대 속도 판별 (GRF 유래 속도 — 이쪽을 쓸 것)')
+    p.add_argument('--n', type=int, default=60, help='세션 표본 수')
+    p.add_argument('--seed', type=int, default=20260819)
+    p.set_defaults(func=cmd_grfrate)
 
     a = ap.parse_args()
     a.func(a)
