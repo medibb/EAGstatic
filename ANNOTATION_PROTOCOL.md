@@ -158,6 +158,9 @@ Vasseljen et al. (2006)의 육안 EMG onset 판정도 smallest detectable differ
 # 1. 대상 세션을 층화 추출해 동결 (worklist 5 + 비worklist 5). 시작 전 커밋할 것
 python3 reliability_pilot.py sessions --n 10
 
+# 1b. 채널 분모를 동결 (본 분석과 같은 PASS 규칙). 시작 전 커밋할 것
+python3 reliability_pilot.py channels
+
 # 2. 자동 검출 스냅샷 (나중에 "사람이 실제로 손댄 이벤트"를 가려내는 기준)
 python3 reliability_pilot.py baseline
 
@@ -337,8 +340,29 @@ GRF만으로 잡혀 offset과 무관한 반면 EAG-anchor 매칭은 offset 오�
 `build_flat_view.load_manual_cohort()`가 `strip_qc()`로 한 번만 수행하고, 하류는
 `audit_ok`를 읽는다. 같은 규칙을 두 곳에 두면 한쪽만 고쳐진다.
 
+**채널 분모도 같은 원리로 사전에 동결한다.** 노이즈로 오염된 채널은 본 분석
+(`channel_quality == 'PASS'`)에서 이미 빠지므로, 그 불일치를 신뢰도에 넣으면 쓰지도 않을
+자료로 tolerance를 정하게 된다. `reliability_pilot.py channels`가 `flag_noise()`
+(SNR < 10 dB · 50 Hz · HF 비율 · 드리프트 · RMS)를 적용해 `pilot_channels.csv`를 만든다.
+
+**빼는 주체가 rater여서는 안 된다.** rater가 작업 중 어려운 채널을 건너뛰면 분모가
+사람마다 달라지고, 빠지는 쪽이 하필 불일치가 큰 자료라 LoA가 좁아진다
+(informative missingness). 그래서 주석 **전에** 신호 지표만으로 정한다.
+`compute_noise_metrics`는 원시 신호만 보므로 rater와 무관하다.
+
+| 빼는 것 | 남기는 것 |
+|---|---|
+| **신호 품질** — SNR 낮음, 50 Hz, 드리프트 | **판정 난이도** — 신호는 깨끗한데 knee가 완만함 |
+| 본 분석에서도 빠짐 | 본 분석에 들어감 |
+
+두 번째를 같이 빼면 안 된다. §5.3에 인용한 Wu et al.의 toe off 16 ms vs flat foot 80 ms가
+바로 그 경우다 — 노이즈가 아니라 이벤트가 본래 완만해서 넓다. 프로토콜이 감당해야 할
+진짜 불확실성이고 tolerance가 포괄해야 할 대상이다. 구분 기준은 **rater의 체감이 아니라
+신호 지표**다.
+
 **동결 상태 (2026-08-19).** 제외 151세션을 뺀 1081에서 층화 추출한 10세션
-(worklist 5 + 비worklist 5, 방문 중복 없음)을 `pilot_sessions.csv`로 동결하고,
+(worklist 5 + 비worklist 5, 방문 중복 없음)과 그 80채널 중 PASS **73채널**
+(LOW_SNR 7개 제외)을 `pilot_sessions.csv` · `pilot_channels.csv`로 동결하고,
 같은 시점의 자동 검출 결과를 `auto_baseline.json`으로 함께 커밋했다(`fbfc325`).
 표본을 다시 뽑으면 `baseline`도 반드시 다시 만든다 — §8.6이 "사람이 실제로 손댄
 이벤트"를 가려내는 기준이 그 스냅샷이기 때문이다.
@@ -399,6 +423,20 @@ edge 작업의 상당 부분은 자동 결과를 그대로 받아들이는 것�
 
 - **전체(all-comers)**: 파이프라인 전체의 실제 신뢰도. 오차 예산(§8.5)에 쓴다
 - **수정된 채널만**: 둘 중 한 명이라도 손댄 채널. 판단 작업 자체의 신뢰도
+
+### 8.4b 커버리지와 제외 판단
+
+리포트 §0은 **이행 점검**이다. 분모가 §8.2에서 동결돼 있으므로 편향 보정이 아니라
+"양쪽이 분모를 다 했는가"를 확인하는 것이다. 그래도 반드시 찍는다 — 이 표가 없으면
+누락을 알아낼 방법이 없고, 아래의 모든 LoA는 조용히 교집합에서만 계산된다.
+
+리포트 §0b는 **제외 판단의 일치도**다. 한 명이 "못 쓴다"고 하고 다른 한 명이 knee를
+찍었다면, 시점이 얼마나 다른가가 아니라 *잴 수 있는 자료인가*에 대한 이견이다.
+edge 비교는 한쪽에 항목이 없다는 이유로 이걸 통째로 건너뛰므로 따로 센다.
+
+**단순 일치율이 아니라 Cohen's kappa로 보고한다.** 제외 판정은 드물기 때문에 일치율은
+자동으로 높게 나온다 — 검증 시나리오에서 일치율 95.7%인데 kappa는 0.553이었다.
+일치율만 적으면 "판단이 일치했다"의 근거가 되지 못한다.
 
 ### 8.5 오차 예산 (이 하위연구의 목적)
 
@@ -514,3 +552,4 @@ Ch.4 4.2.7에 들어갈 문장 구조다. 대괄호는 확정 후 채운다.
 | 2026-08-18 | 최초 작성. `REVIEW_WORKFLOW.md`의 프로토콜·판정 규칙을 흡수하고, 조작적 정의·tolerance·rater 자격·신뢰도 설계를 신설 |
 | 2026-08-18 | 구현 반영: `store_io.py`(EAG_RESULT_DIR 격리 + atomic write), 두 앱의 `--blank`, `reliability_pilot.py`(sessions/baseline/report). §5.3 절차와 §8.3을 실행 가능한 명령으로 교체 |
 | 2026-08-19 | rater당 앱 2개(포트 4개)로 정정. 이전 예시는 rater마다 다른 작업을 시켜 리포트가 비었다. §8.2에 표본 제외 기준(`audit_ok` · `exclusions.json`)과 동결 상태 추가. `EAG_RESULT_DIR` 절대경로 명시 |
+| 2026-08-19 | 채널 분모를 PASS 규칙으로 사전 동결(`channels` 서브커맨드, §8.2). 리포트에 커버리지 이행 점검과 제외 판단 kappa 추가(§8.4b) — 이전에는 한쪽만 작업한 채널이 조용히 빠져 LoA가 좁게 나왔다(시뮬레이션에서 반폭 0.060 vs 실제 0.174) |

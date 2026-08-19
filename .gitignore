@@ -51,6 +51,7 @@ result/*
 !result/reliability/
 result/reliability/*
 !result/reliability/pilot_sessions.csv
+!result/reliability/pilot_channels.csv
 !result/reliability/auto_baseline.json
 results/
 

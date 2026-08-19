@@ -43,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 REL_DIR = Path('result/reliability')
 SESSIONS_CSV = REL_DIR / 'pilot_sessions.csv'
+CHANNELS_CSV = REL_DIR / 'pilot_channels.csv'
 BASELINE_JSON = REL_DIR / 'auto_baseline.json'
 REPORT_DIR = REL_DIR / 'report'
 
@@ -173,6 +174,89 @@ def cmd_sessions(args):
     print("\n⚠️ 작업 시작 전에 이 파일을 커밋해 표본을 동결하세요.")
 
 
+# ==================== 1b) channels ====================
+
+def cmd_channels(args):
+    """파일럿의 **채널 분모**를 동결한다. 본 분석과 같은 PASS 규칙을 쓴다.
+
+    노이즈로 오염된 채널은 본 분석(`stats_grf_eag`의 `channel_quality == 'PASS'`)에서
+    이미 빠진다. 그런 채널의 불일치를 신뢰도에 넣으면 쓰지도 않을 자료로 tolerance를
+    정하게 되므로 분모에서 뺀다.
+
+    **다만 빼는 주체가 rater여서는 안 된다.** rater가 작업 중 어려운 채널을 건너뛰면
+    분모가 사람마다 달라지고, 빠지는 쪽이 하필 불일치가 큰 자료라 LoA가 좁아진다
+    (informative missingness). 그래서 주석 **전에** 신호 지표만으로 정하고 동결한다.
+    `compute_noise_metrics`는 원시 신호만 보므로 rater와 무관하다.
+
+    빼는 것은 '신호 품질'이지 '판정 난이도'가 아니다. 신호는 깨끗한데 knee가 완만해
+    판단이 갈리는 채널은 남긴다 — 그건 프로토콜이 감당해야 할 진짜 불확실성이고
+    tolerance가 포괄해야 할 대상이다 (§5.3의 Wu et al.: flat foot이 toe off보다 5배 넓다).
+    """
+    from sync_analyzer import find_session_pair, SyncAnalyzer
+    from parameter_extractor import evaluate_channel_quality
+
+    if CHANNELS_CSV.exists() and not args.force:
+        raise SystemExit(f"{CHANNELS_CSV}가 이미 있습니다. 분모를 다시 정하면 사전 동결이 "
+                         f"깨집니다. 정말 다시 뽑으려면 --force")
+
+    rows = read_pilot_sessions()
+    out = []
+    for i, r in enumerate(rows, 1):
+        print(f"[{i}/{len(rows)}] {r['subject']} / {r['session']}", flush=True)
+        try:
+            pair = find_session_pair(r['dir'])
+            if pair is None:
+                print('   건너뜀 (EAG+GRF 쌍 없음)')
+                continue
+            with _quiet():
+                sa = SyncAnalyzer(pair)
+                q = evaluate_channel_quality(sa.eag)
+        except Exception as e:
+            print(f"   실패: {type(e).__name__}: {e}")
+            continue
+        for ch0 in sorted(q):
+            m = q[ch0]
+            out.append({
+                'subject': r['subject'], 'session': r['session'],
+                # 전극번호(1-based)로 적는다. manual_edges·exclusions의 채널 키가 1-based라
+                # 0-based로 두면 한 칸씩 어긋난 채 조용히 합쳐진다.
+                'channel': ch0 + 1,
+                'include': m['flag'] == 'PASS',
+                'quality': m['flag'], 'flags': '|'.join(m['flags']),
+                'snr_db': round(float(m['snr_db']), 2),
+                'power_hf_ratio': round(float(m['power_hf_ratio']), 4),
+            })
+
+    REL_DIR.mkdir(parents=True, exist_ok=True)
+    with open(CHANNELS_CSV, 'w', newline='', encoding='utf-8') as f:
+        w = csv.DictWriter(f, fieldnames=list(out[0].keys()))
+        w.writeheader(); w.writerows(out)
+
+    n_in = sum(r['include'] for r in out)
+    print(f"\n채널 {len(out)}개 중 분모 {n_in}개 (제외 {len(out) - n_in})")
+    drop = {}
+    for r in out:
+        if not r['include']:
+            drop[r['quality']] = drop.get(r['quality'], 0) + 1
+    for k, v in sorted(drop.items(), key=lambda kv: -kv[1]):
+        print(f"  제외 사유 {k}: {v}")
+    print(f"→ {CHANNELS_CSV}")
+    print("\n⚠️ 작업 시작 전에 커밋해 분모를 동결하세요.")
+    print("   rater에게는 include=True 채널만 작업하도록 안내합니다.")
+
+
+def read_pilot_channels() -> set:
+    """동결된 채널 분모 {(subject, session, channel:str)}. 없으면 빈 집합."""
+    if not CHANNELS_CSV.exists():
+        return set()
+    out = set()
+    with open(CHANNELS_CSV, encoding='utf-8') as f:
+        for r in csv.DictReader(f):
+            if str(r['include']).strip().lower() in ('true', '1', 'yes'):
+                out.add((r['subject'], r['session'], str(r['channel'])))
+    return out
+
+
 # ==================== 2) baseline ====================
 
 def cmd_baseline(args):
@@ -266,10 +350,113 @@ def _match_edges(ea: list, eb: list, tol: float):
     return pairs, only_a, only_b
 
 
+def _edge_channels(store: dict) -> set:
+    """manual_edges → 주석한 채널 집합 {(subject, session, channel)}."""
+    return {(s, ses, ch)
+            for s, sm in store.items() for ses, cm in sm.items() for ch in cm}
+
+
+def _excluded_channels(store: dict, denom: set) -> set:
+    """exclusions → 제외 표시된 채널 집합. 채널 '0'은 세션 전체 제외라 펼친다.
+
+    분모(denom)가 있으면 세션 제외를 그 세션의 분모 채널로 펼치고, 없으면 1~8로 펼친다.
+    """
+    out = set()
+    for s, sm in store.items():
+        for ses, cm in sm.items():
+            for ch in cm:
+                if str(ch) == '0':
+                    chans = ([c for (a, b, c) in denom if a == s and b == ses]
+                             or [str(i) for i in range(1, 9)])
+                    out.update((s, ses, c) for c in chans)
+                else:
+                    out.add((s, ses, str(ch)))
+    return out
+
+
+def _kappa(both_ann: int, a_only: int, b_only: int, both_exc: int):
+    """제외/주석 2범주에 대한 Cohen's kappa. 우연 일치를 넘는 부분만 남긴다.
+
+    단순 일치율은 한쪽 범주가 드물면(제외가 거의 없으면) 자동으로 높게 나와
+    "판단이 일치했다"의 근거가 되지 못한다.
+    """
+    n = both_ann + a_only + b_only + both_exc
+    if n == 0:
+        return None
+    po = (both_ann + both_exc) / n
+    # a_only = A는 주석 · B는 제외
+    pa_ann, pb_ann = (both_ann + a_only) / n, (both_ann + b_only) / n
+    pe = pa_ann * pb_ann + (1 - pa_ann) * (1 - pb_ann)
+    if abs(1 - pe) < 1e-12:
+        return None
+    return (po - pe) / (1 - pe)
+
+
 def cmd_report(args):
     ra, rb = args.a, args.b
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     lines = [f"# 신뢰도 파일럿 리포트 ({ra} vs {rb})", ""]
+
+    # ---------- 0. 커버리지 (이행 점검) ----------
+    # 분모는 pilot_channels.csv로 사전 동결돼 있으므로 편향 보정이 아니라 이행 점검이다.
+    # 그래도 반드시 찍는다 — 이 표가 없으면 rater가 빠뜨린 채널을 알아낼 방법이 없고,
+    # 아래의 모든 LoA는 조용히 교집합에서만 계산된다.
+    denom = read_pilot_channels()
+    ea_all, eb_all = _load_store(ra, 'manual_edges.json'), _load_store(rb, 'manual_edges.json')
+    xa, xb = _load_store(ra, 'exclusions.json'), _load_store(rb, 'exclusions.json')
+    ca, cb = _edge_channels(ea_all), _edge_channels(eb_all)
+    xca, xcb = _excluded_channels(xa, denom), _excluded_channels(xb, denom)
+
+    lines += ["## 0. 커버리지", ""]
+    if denom:
+        done_a, done_b = (ca | xca) & denom, (cb | xcb) & denom
+        miss_a, miss_b = denom - done_a, denom - done_b
+        lines += [
+            f"동결 분모 **{len(denom)}채널** (`pilot_channels.csv`, PASS 규칙)", "",
+            "| | 처리 | 미처리 | 이행률 |", "|---|---|---|---|",
+            f"| {ra} | {len(done_a)} | {len(miss_a)} | {len(done_a)/len(denom):.1%} |",
+            f"| {rb} | {len(done_b)} | {len(miss_b)} | {len(done_b)/len(denom):.1%} |", ""]
+        extra = ((ca | xca) | (cb | xcb)) - denom
+        if extra:
+            lines.append(f"⚠️ 분모 **밖** 채널 작업 {len(extra)}건 — 분모가 사후에 흔들린다. "
+                         f"아래 계산에서는 제외했다.")
+        for who, miss in ((ra, miss_a), (rb, miss_b)):
+            if miss:
+                lines.append(f"⚠️ **{who} 미처리 {len(miss)}채널** — 누락이지 편향이 아니다. "
+                             f"마저 작업시킨 뒤 리포트를 다시 돌린다.")
+                lines += ["", "```"] + [f"  {s}/{ses} ch{c}" for s, ses, c in sorted(miss)[:20]] + ["```"]
+        if not miss_a and not miss_b:
+            lines.append("✅ 양쪽 모두 분모를 100% 처리했다. 아래 LoA는 분모 전체에서 나온 값이다.")
+        lines.append("")
+    else:
+        lines += ["⚠️ `pilot_channels.csv` 없음 — 분모가 동결되지 않았다. "
+                  "아래 LoA는 **두 rater가 우연히 겹친 채널**에서만 계산되며, "
+                  "빠지는 쪽이 불일치가 큰 자료에 몰리므로 좁게 나온다. "
+                  "`reliability_pilot.py channels`를 먼저 실행할 것.", ""]
+
+    # ---------- 0b. 제외 판단 일치도 ----------
+    # "이 채널이 잴 수 있는 자료인가"에 대한 이견은 시점 불일치보다 큰 종류의 불일치인데,
+    # edge 비교는 한쪽에 항목이 없다는 이유로 이걸 통째로 건너뛴다. 따로 센다.
+    scope = denom or ((ca | xca) & (cb | xcb))
+    both_ann = len((ca - xca) & (cb - xcb) & scope)
+    a_only = len(((ca - xca) & xcb) & scope)      # A는 주석, B는 제외
+    b_only = len((xca & (cb - xcb)) & scope)      # A는 제외, B는 주석
+    both_exc = len(xca & xcb & scope)
+    k = _kappa(both_ann, a_only, b_only, both_exc)
+    lines += ["## 0b. 제외 판단 일치도", "",
+              "| | B 주석 | B 제외 |", "|---|---|---|",
+              f"| **A 주석** | {both_ann} | {a_only} |",
+              f"| **A 제외** | {b_only} | {both_exc} |", ""]
+    if k is None:
+        lines += ["한쪽 범주가 비어 kappa를 정의할 수 없다 "
+                  "(제외 판정이 전혀 없으면 정상이다).", ""]
+    else:
+        lines += [f"- Cohen's **kappa = {k:.3f}** (단순 일치율 "
+                  f"{(both_ann + both_exc) / max(1, both_ann + a_only + b_only + both_exc):.1%})", ""]
+    if a_only + b_only:
+        lines += [f"⚠️ 한쪽만 제외한 채널 **{a_only + b_only}건**. 시점이 얼마나 다른가가 아니라 "
+                  f"*잴 수 있는 자료인가*에 대한 이견이므로, 아래 LoA에는 잡히지 않는다. "
+                  f"§5.5 기준을 다시 맞출 대상이다.", ""]
 
     # ---------- offset ----------
     oa, ob = _load_store(ra, 'manual_offsets.json'), _load_store(rb, 'manual_offsets.json')
@@ -286,7 +473,22 @@ def cmd_report(args):
             off_diffs.append(va - vb)
     ba_off = bland_altman(off_diffs)
 
+    # 세션 커버리지도 같이 센다. offset은 세션 단위라 채널 분모와 별개다.
+    pilot_sess = {(r['subject'], r['session']) for r in read_pilot_sessions()} \
+        if SESSIONS_CSV.exists() else set()
+    sa_ = {(s, ses) for s, m in oa.items() for ses in m}
+    sb_ = {(s, ses) for s, m in ob.items() for ses in m}
+
     lines += ["## 1. offset (세션 단위)", ""]
+    if pilot_sess:
+        lines += [f"동결 표본 {len(pilot_sess)}세션 · 확정 {ra} {len(sa_ & pilot_sess)} / "
+                  f"{rb} {len(sb_ & pilot_sess)} · 공통 {len(sa_ & sb_ & pilot_sess)}", ""]
+        for who, done in ((ra, sa_), (rb, sb_)):
+            miss = pilot_sess - done
+            if miss:
+                lines.append(f"⚠️ **{who} 미확정 {len(miss)}세션**: "
+                             + ', '.join(f"{s}/{ses}" for s, ses in sorted(miss)[:10]))
+        lines.append("")
     if ba_off['n'] == 0:
         lines += ["두 rater가 공통으로 확정한 세션이 없습니다.", ""]
     else:
@@ -299,7 +501,9 @@ def cmd_report(args):
             f"→ **offset tolerance 후보: {_round_tol(ba_off['loa_halfwidth'])} s**", ""]
 
     # ---------- edge ----------
-    eaS, ebS = _load_store(ra, 'manual_edges.json'), _load_store(rb, 'manual_edges.json')
+    # 분모가 동결돼 있으면 그 안에서만 센다. 분모 밖 채널을 섞으면 사람마다 다른
+    # 모집단에서 계산되고, §0에서 이행률을 보고한 대상과도 달라진다.
+    eaS, ebS = ea_all, eb_all
     sweep, per_tol = [], {}
     for tol in TOL_SWEEP:
         n_pair = n_a = n_b = 0
@@ -307,6 +511,8 @@ def cmd_report(args):
         for subj, sess_map in eaS.items():
             for sess, ch_map in sess_map.items():
                 for ch, entry in ch_map.items():
+                    if denom and (subj, sess, str(ch)) not in denom:
+                        continue
                     other = ebS.get(subj, {}).get(sess, {}).get(ch)
                     if not other:
                         continue
@@ -408,6 +614,10 @@ def main():
     p1.add_argument('--seed', type=int, default=20260818)
     p1.add_argument('--force', action='store_true', help='기존 표본을 덮어쓴다')
     p1.set_defaults(func=cmd_sessions)
+
+    p1b = sub.add_parser('channels', help='채널 분모 동결 (PASS 규칙, 주석 전에 실행)')
+    p1b.add_argument('--force', action='store_true', help='기존 분모를 덮어쓴다')
+    p1b.set_defaults(func=cmd_channels)
 
     p2 = sub.add_parser('baseline', help='자동 검출 스냅샷 생성')
     p2.set_defaults(func=cmd_baseline)
