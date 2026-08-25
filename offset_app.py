@@ -55,6 +55,10 @@ import store_io
 
 # 신뢰도 파일럿용 백지 모드 (main()에서 --blank로 설정)
 BLANK = False
+# 작업 범위 제한 (main()에서 --only로 설정). None이면 전체 세션.
+# --blank와 분리해 둔다: blank는 '무엇이 보이는가', scope는 '무엇을 작업할 수 있는가'로
+# 서로 다른 관심사다. 묶어두면 자격 판정처럼 목록만 다른 라운드를 돌릴 수 없다.
+SCOPE = None
 import exclusion_store
 
 MAX_POINTS = 20000    # 표시 다운샘플 목표 점 수 (클릭 정밀도 확보용으로 넉넉히)
@@ -195,9 +199,11 @@ def session_index() -> list:
     rows = []
     for r in scan_sessions():
         key = (r['subject'], r['session'])
+        if SCOPE is not None and key not in SCOPE:
+            continue
         e = exc.get(key, {})
         rows.append({**r, 'reason': wl.get(key, ''), 'in_worklist': key in wl,
-                     'manual': man.get(key),
+                     'manual': man.get(key), 'scope': SCOPE is not None,
                      'excluded': (e.get('session') or {}).get('reason') if e.get('session') else None})
     # 검토 필요 세션을 위로
     rows.sort(key=lambda r: (not r['in_worklist'], r['subject'], r['session']))
@@ -651,7 +657,11 @@ function renderList(){
               : f==='excluded'?x.excluded!=null : x.manual==null;
  const keep=x=> keepStatus(x) && (sf==='all' || personOf(x.subject)===sf);
  const rows=SESSIONS.filter(keep), nDone=SESSIONS.filter(x=>x.manual!=null).length;
- sel.innerHTML=`<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · 확정 ${nDone}) —</option>`;
+ // 범위 제한 모드에서는 SESSIONS가 곧 할당량이므로 남은 개수를 직접 보여준다.
+ const scoped=SESSIONS.length>0 && SESSIONS[0].scope;
+ sel.innerHTML = scoped
+  ? `<option value="">— 파일럿 ${nDone}/${SESSIONS.length} 완료 · 남음 ${SESSIONS.length-nDone} —</option>`
+  : `<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · 확정 ${nDone}) —</option>`;
  rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
   o.textContent=(x.excluded?'⛔ ':x.manual!=null?'✅ ':x.in_worklist?'▲ ':'　 ')+x.subject+' / '+x.session+
    (x.excluded?'  [제외:'+x.excluded+']':'')+
@@ -662,7 +672,11 @@ function renderList(){
 }
 function refreshList(){
  return fetch(api('api/sessions')).then(r=>r.json())
-   .then(rows=>{SESSIONS=rows;renderSubjects();renderList();});
+   .then(rows=>{SESSIONS=rows;
+    // 범위 제한 모드에서는 대상자 필터가 무의미하다(10세션 안팎). 숨겨서 화면을 줄인다.
+    const scoped=SESSIONS.length>0 && SESSIONS[0].scope;
+    document.getElementById('subjfilter').style.display=scoped?'none':'';
+    renderSubjects();renderList();});
 }
 document.getElementById('filter').onchange=renderList;
 document.getElementById('subjfilter').onchange=renderList;
@@ -681,15 +695,23 @@ def main():
     ap.add_argument('--blank', action='store_true',
                     help='신뢰도 파일럿용. 자동 보정(residual)과 best-match 후보를 숨긴다 '
                          '(ANNOTATION_PROTOCOL.md §5.3). 저장 위치는 EAG_RESULT_DIR로 분리할 것')
+    ap.add_argument('--only', metavar='SESSIONS_CSV',
+                    help='이 목록의 세션만 드롭다운에 띄운다 '
+                         '(예: result/reliability/pilot_sessions.csv). --blank와 독립적이다')
     args = ap.parse_args()
     if args.port == 3002:
         raise SystemExit('port 3002는 api-server 전용이라 사용 금지')
-    global BLANK
+    global BLANK, SCOPE
     BLANK = args.blank
+    if args.only:
+        from pilot_scope import load_scope_sessions
+        SCOPE = load_scope_sessions(args.only)   # 파일이 없으면 여기서 기동을 거부한다
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"Offset Aligner: http://{args.host}:{args.port}  (Ctrl-C 종료)")
     if BLANK:
         print(f"  [BLANK MODE] 자동 보정·후보 숨김 · 저장 위치: {store_io.result_dir()}")
+    if SCOPE is not None:
+        print(f"  [SCOPE] {args.only} → {len(SCOPE)}세션만 표시")
     print("  GRF 점 클릭 → EAG 대응점 클릭 → Save")
     try:
         srv.serve_forever()

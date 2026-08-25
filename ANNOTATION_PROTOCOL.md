@@ -169,18 +169,24 @@ python3 reliability_pilot.py baseline
 #    EAG_RESULT_DIR은 절대경로로 준다 — store_io는 받은 값을 그대로 쓰므로,
 #    상대경로면 앱을 띄운 위치에 따라 rater 자료가 딴 데 쌓인다.
 R=$PWD/result/reliability
-EAG_RESULT_DIR=$R/rater_main python3 offset_app.py --host 0.0.0.0 --port 8768 --blank
-EAG_RESULT_DIR=$R/rater_main python3 edge_app.py   --host 0.0.0.0 --port 8769 --blank
-EAG_RESULT_DIR=$R/rater_rel  python3 offset_app.py --host 0.0.0.0 --port 8770 --blank
-EAG_RESULT_DIR=$R/rater_rel  python3 edge_app.py   --host 0.0.0.0 --port 8771 --blank
-EAG_RESULT_DIR=$R/rater_ref  python3 offset_app.py --host 0.0.0.0 --port 8772 --blank
-EAG_RESULT_DIR=$R/rater_ref  python3 edge_app.py   --host 0.0.0.0 --port 8773 --blank
+S=$R/pilot_sessions.csv; C=$R/pilot_channels.csv    # 동결 범위
+EAG_RESULT_DIR=$R/rater_main python3 offset_app.py --host 0.0.0.0 --port 8768 --blank --only $S
+EAG_RESULT_DIR=$R/rater_main python3 edge_app.py   --host 0.0.0.0 --port 8769 --blank --only $S --channels $C
+EAG_RESULT_DIR=$R/rater_rel  python3 offset_app.py --host 0.0.0.0 --port 8770 --blank --only $S
+EAG_RESULT_DIR=$R/rater_rel  python3 edge_app.py   --host 0.0.0.0 --port 8771 --blank --only $S --channels $C
+EAG_RESULT_DIR=$R/rater_ref  python3 offset_app.py --host 0.0.0.0 --port 8772 --blank --only $S
+EAG_RESULT_DIR=$R/rater_ref  python3 edge_app.py   --host 0.0.0.0 --port 8773 --blank --only $S --channels $C
 
 # 4. 쌍별 LoA. 어느 쌍이 무엇을 재는지는 §8.3의 역할표를 볼 것
 python3 reliability_pilot.py report --a rater_main --b rater_rel   # Methods 대표값
 python3 reliability_pilot.py report --a rater_ref  --b rater_main  # §6 자격 판정
 python3 reliability_pilot.py report --a rater_ref  --b rater_rel   # 참고
 ```
+
+`--only`/`--channels`는 `--blank`와 **독립적인 플래그**다. blank는 *무엇이 보이는가*,
+scope는 *무엇을 작업할 수 있는가*를 정한다. 묶어두면 자격 판정(§6)처럼 목록만 다른
+라운드를 돌릴 수 없다. 목록 파일이 없으면 **기동을 거부한다** — 조용히 전체를 열어주면
+rater가 범위를 벗어난 줄 모르고 작업하게 된다.
 
 > **한 명에게 offset만, 다른 한 명에게 edge만 시키면 안 된다.** 비교할 공통 항목이
 > 없어져 리포트가 통째로 빈 채로 나온다 — 에러 없이, 며칠치 주석 작업을 마친 뒤에야.
@@ -584,4 +590,5 @@ Ch.4 4.2.7에 들어갈 문장 구조다. 대괄호는 확정 후 채운다.
 | 2026-08-18 | 구현 반영: `store_io.py`(EAG_RESULT_DIR 격리 + atomic write), 두 앱의 `--blank`, `reliability_pilot.py`(sessions/baseline/report). §5.3 절차와 §8.3을 실행 가능한 명령으로 교체 |
 | 2026-08-19 | rater당 앱 2개(포트 4개)로 정정. 이전 예시는 rater마다 다른 작업을 시켜 리포트가 비었다. §8.2에 표본 제외 기준(`audit_ok` · `exclusions.json`)과 동결 상태 추가. `EAG_RESULT_DIR` 절대경로 명시 |
 | 2026-08-19 | 채널 분모를 PASS 규칙으로 사전 동결(`channels` 서브커맨드, §8.2). 리포트에 커버리지 이행 점검과 제외 판단 kappa 추가(§8.4b) — 이전에는 한쪽만 작업한 채널이 조용히 빠져 LoA가 좁게 나왔다(시뮬레이션에서 반폭 0.060 vs 실제 0.174) |
+| 2026-08-25 | 앱에 작업 범위 제한 추가(`--only`/`--channels`, `pilot_scope.py`). rater 화면에 동결 표본 10세션만 뜨고, 채널은 그 세션의 PASS 채널만 고를 수 있다 — 이전에는 1232세션이 모두 떠서 대상을 찾기 어려웠고 분모 밖 채널도 작업됐다 |
 | 2026-08-19 | rater 역할을 이름·포트로 분리(`rater_main`/`rater_rel`/`rater_ref`, 포트 6개). tolerance는 세 쌍 중 가장 넓은 것에서 채택 — §6의 순환이 풀린다. §8.3 백지 모드 표를 실제 동작에 맞게 정정(offset 화면의 EAG 변곡점 표식은 남는다) |

@@ -40,6 +40,10 @@ import store_io
 
 # 신뢰도 파일럿용 백지 모드 (main()에서 --blank로 설정)
 BLANK = False
+# 작업 범위 제한 (main()에서 --only / --channels로 설정). None이면 전체.
+# --blank와 분리해 둔다: blank는 '무엇이 보이는가', scope는 '무엇을 작업할 수 있는가'다.
+SCOPE = None          # {(subject, session)}
+SCOPE_CH = None       # {(subject, session): [채널 …]}
 
 
 @contextlib.contextmanager
@@ -194,9 +198,15 @@ def session_index() -> list:
     rows = []
     for r in scan_sessions():
         key = (r['subject'], r['session'])
+        if SCOPE is not None and key not in SCOPE:
+            continue
         chans = sorted(ed.get(key, []))
         p = proto.get(key)
         rows.append({**r,
+                     'scope': SCOPE is not None,
+                     # 허용 채널을 세션마다 내려보내 드롭다운을 그 세션 기준으로 채운다.
+                     'allowed_channels': (None if SCOPE_CH is None
+                                          else SCOPE_CH.get(key, [])),
                      'reason': wl.get(key, ''), 'in_worklist': key in wl,
                      'edge_channels': [c for c, _ in chans],
                      'edge_counts': [n for _, n in chans],
@@ -306,7 +316,7 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
   <option value="excluded">분석제외 ⛔</option>
  </select>
  <input id="sess" placeholder="session dir (또는 목록 선택)" size="30">
- <label>ch <input id="ch" type="number" value="1" min="1" max="8" style="width:44px"></label>
+ <label>ch <select id="ch" style="width:60px"></select></label>
  <button id="load">Load</button>
  <button id="addmode">Add mode</button>
  <button id="del">Delete sel</button>
@@ -567,7 +577,11 @@ function renderList(){
               : f==='proto'?proto(x) : f==='excluded'?isExc(x) : !done(x);
  const keep=x=> keepStatus(x) && (sf==='all' || personOf(x.subject)===sf);
  const rows=SESSIONS.filter(keep), nDone=SESSIONS.filter(done).length;
- sel.innerHTML=`<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · edge확정 ${nDone}) —</option>`;
+ // 범위 제한 모드에서는 SESSIONS가 곧 할당량이므로 남은 개수를 직접 보여준다.
+ const scoped=SESSIONS.length>0 && SESSIONS[0].scope;
+ sel.innerHTML = scoped
+  ? `<option value="">— 파일럿 ${nDone}/${SESSIONS.length} 세션 완료 · 남음 ${SESSIONS.length-nDone} —</option>`
+  : `<option value="">— 세션 선택 (표시 ${rows.length} / 전체 ${SESSIONS.length} · edge확정 ${nDone}) —</option>`;
  rows.forEach(x=>{const o=document.createElement('option');o.value=x.dir;
   const pr = x.proto_total ? (x.proto_ok===x.proto_total?'✅':'⚠️')+x.proto_ok+'/'+x.proto_total : '';
   const ex = x.excl_session?('제외:'+x.excl_session):(x.excl_channels&&x.excl_channels.length?('제외 ch'+x.excl_channels.join(',')):'');
@@ -580,12 +594,30 @@ function renderList(){
   sel.appendChild(o);});
  sel.value=cur;
 }
+// 채널 드롭다운은 선택된 세션 기준으로 채운다. 범위 제한 모드에서는 그 세션의 허용
+// 채널만 들어가므로, 신호 품질로 걸러진 채널은 **선택 자체가 불가능**해진다.
+// (예전 number 입력은 8을 타이핑하면 분모 밖 채널도 그냥 작업됐다.)
+function renderChannels(){
+ const sel=document.getElementById('ch'), cur=sel.value;
+ const dir=document.getElementById('sess').value;
+ const row=SESSIONS.find(x=>x.dir===dir);
+ const list=(row && row.allowed_channels && row.allowed_channels.length)
+            ? row.allowed_channels : Array.from({length:8},(_,i)=>i+1);
+ sel.innerHTML='';
+ list.forEach(c=>{const o=document.createElement('option');
+  o.value=c;o.textContent=c;sel.appendChild(o);});
+ sel.value=list.map(String).includes(cur)?cur:String(list[0]);
+}
 function refreshList(){return fetch(api('api/sessions')).then(r=>r.json())
- .then(rows=>{SESSIONS=rows;renderSubjects();renderList();});}
+ .then(rows=>{SESSIONS=rows;
+  const scoped=SESSIONS.length>0 && SESSIONS[0].scope;
+  document.getElementById('subjfilter').style.display=scoped?'none':'';
+  renderSubjects();renderList();renderChannels();});}
 document.getElementById('filter').onchange=renderList;
 document.getElementById('subjfilter').onchange=renderList;
 document.getElementById('wl').onchange=()=>{const v=document.getElementById('wl').value;
- if(v){document.getElementById('sess').value=v;load();}};
+ if(v){document.getElementById('sess').value=v;renderChannels();load();}};
+renderChannels();
 refreshList();
 </script></body></html>"""
 
@@ -597,15 +629,31 @@ def main():
     ap.add_argument('--blank', action='store_true',
                     help='신뢰도 파일럿용. EAG edge 자동검출을 숨기고 빈 상태에서 시작한다 '
                          '(ANNOTATION_PROTOCOL.md §5.3). 저장 위치는 EAG_RESULT_DIR로 분리할 것')
+    ap.add_argument('--only', metavar='SESSIONS_CSV',
+                    help='이 목록의 세션만 드롭다운에 띄운다 '
+                         '(예: result/reliability/pilot_sessions.csv). --blank와 독립적이다')
+    ap.add_argument('--channels', metavar='CHANNELS_CSV',
+                    help='세션별 허용 채널 목록 (예: result/reliability/pilot_channels.csv). '
+                         'include=True 채널만 선택지에 들어간다')
     args = ap.parse_args()
     if args.port == 3002:
         raise SystemExit('port 3002는 api-server 전용이라 사용 금지')
-    global BLANK
+    global BLANK, SCOPE, SCOPE_CH
     BLANK = args.blank
+    if args.only:
+        from pilot_scope import load_scope_sessions
+        SCOPE = load_scope_sessions(args.only)      # 없으면 여기서 기동을 거부한다
+    if args.channels:
+        from pilot_scope import load_scope_channels
+        SCOPE_CH = load_scope_channels(args.channels)
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"Edge Annotator: http://{args.host}:{args.port}  (Ctrl-C 종료)")
     if BLANK:
         print(f"  [BLANK MODE] 자동 edge 숨김 · 저장 위치: {store_io.result_dir()}")
+    if SCOPE is not None:
+        print(f"  [SCOPE] {args.only} → {len(SCOPE)}세션만 표시")
+    if SCOPE_CH is not None:
+        print(f"  [SCOPE] {args.channels} → 허용 채널 {sum(len(v) for v in SCOPE_CH.values())}개")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
