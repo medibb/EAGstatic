@@ -4,9 +4,10 @@
 
 ## 0. 상황
 
-- 이 서버: Ubuntu 26.04.1, RTX 3090 × 2. 호스트에 Docker + nvidia-container-toolkit. 연구는 **컨테이너 `~/projects/gpu-env`** 안에서 한다(공식 PyTorch 이미지, 호스트와 같은 UID/GID, Claude Code 포함, 자동 업데이트 꺼짐).
-- 마운트: `~/projects` → 작업 폴더(쓰기 가능), `~/data` → **읽기 전용**, `~/.claude*` → 로그인 유지.
-- 지금 네가 어디서 실행 중인지 먼저 확인하라: `[ -f /.dockerenv ] && echo container || echo host`. 이 문서의 실행 단계는 **컨테이너 안**에서 한다. 호스트에서 할 일은 rsync뿐이며, 그것은 사용자가 한다.
+- 이 서버: Ubuntu 26.04.1, RTX 3090 × 2, NVIDIA 드라이버 설치됨. **현재는 호스트(우분투 자체)의 Claude Code로 진행한다.** Docker 연구 컨테이너(`~/projects/gpu-env`)는 준비 중이며, 완성되면 같은 절차를 컨테이너 안에서 `./setup_gpu.sh --container`로 반복하면 된다.
+- 어디서 실행 중인지 먼저 확인하라: `[ -f /.dockerenv ] && echo container || echo host`. 결과에 따라 §4의 설치 명령이 달라진다. 나머지 단계는 동일.
+- NAS가 rclone으로 마운트되어 있을 수 있다. 있으면 §3의 데이터 복사를 rsync 대신 그 마운트에서 `cp`로 한다. 단 **실행은 로컬 디스크(`~/projects/EAGstatic`)에서** 한다. 2~4시간 무인 실행을 네트워크 마운트 위에서 하다 끊기면 결과를 잃는다.
+- 데이터는 건강 자원자 연구 자료다. 분석 단계에서 가명화는 하지 않는다(사용자 결정). 다만 피험자 이름을 보고서에 나열할 이유는 없으니 숫자(41명)로만 말하라.
 - 이 저장소(EAGstatic)는 NAS(Synology, CPU만)에서 개발·1차 실행된 코드다. 1차 결과는 `result/ml/crutch_*`에 있다. 이 서버의 역할은 **CPU로 비현실적이었던 나머지 계산**(seed 반복, 순열 100회)을 GPU로 끝내는 것이다. 코드 로직은 바꾸지 않는다.
 - 연구 내용: 무릎 EAG(electroarthrography, 8채널 25 Hz) 신호로 체중부하 시 "목발(c) vs 반대다리(s, f)"를 분류하는 LOSO 실험. 1차 결론은 "모든 모델이 balanced accuracy 0.53~0.55, chance 위이지만 작음, 작은 CNN이 최고". 자세한 것은 `ml_crutch.py` docstring.
 
@@ -14,9 +15,8 @@
 
 - `ml_crutch.py`, `epoch_extractor.py` 등 분석 로직 수정 금지. 버그를 발견하면 고치지 말고 보고.
 - `result/` 아래 파일을 git에 추가하지 말 것(.gitignore 대상). 커밋·push 자체를 하지 말 것.
-- `~/data`에 쓰지 말 것. 이 작업은 `~/data`를 쓰지 않는다.
-- 데이터 파일의 `subject`, `subject_id` 열 값을 **화면에 출력하거나 보고서에 적지 말 것**. 사람 이름이 들어 있을 수 있다. 피험자 수(41)만 보고하라.
-- 긴 작업이 도는 동안 컨테이너를 `stop`/`down` 하지 말 것. 프로세스가 죽는다.
+- NAS 마운트 쪽 파일을 수정·삭제하지 말 것. 마운트는 읽기(복사해 오기)와 마지막 결과 되돌리기에만 쓴다.
+- 긴 작업은 반드시 `nohup ./run_crutch_gpu.sh > /dev/null 2>&1 &` 형태로. 포그라운드나 Bash 도구의 백그라운드로 띄우면 세션이 끊길 때 함께 죽는다(NAS에서 하루 잃은 전례). 컨테이너 안이라면 작업 중 `stop`/`down` 금지.
 - GPU 외 다른 방법(CPU fallback)으로 본 실행을 하지 말 것. CUDA가 안 되면 멈추고 보고.
 
 ## 2. 전제 확인
@@ -41,22 +41,39 @@ ls -la result/ml/epochs.npz result/ml/cycles.npz result/ml/events.csv result/ml/
 ls result/ml/crutch_*_summary.json | wc -l      # NAS 1차 결과(선택). 있으면 재현 대조에 쓴다
 ```
 
-**확인 기준**: 6개 모두 존재. 하나라도 없으면 사용자에게 아래 명령을 **호스트에서** 실행해 달라고 하고 멈춰라(컨테이너에는 NAS ssh 키가 없다).
+**확인 기준**: 6개 모두 존재. 없으면 가져온다. 순서대로 시도:
 
-```bash
-rsync -avz --relative nas:/volume1/docker/claude-system/workspace/research/EAGstatic/./result/{ml/epochs.npz,ml/cycles.npz,ml/events.csv,ml/loso_predictions.csv,stats/grf_eag_pooled.csv,stats/cov_per_subject.csv} ~/projects/EAGstatic/
-rsync -avz nas:/volume1/docker/claude-system/workspace/research/EAGstatic/result/ml/crutch_* ~/projects/EAGstatic/result/ml/
-```
+1. **rclone 마운트가 있으면** (`mount | grep -i rclone`, 또는 사용자에게 경로를 물어라). 마운트 안의 `…/research/EAGstatic/result/`에서 복사:
+   ```bash
+   M=<마운트경로>/research/EAGstatic/result        # 예: /mnt/nas/claude-system/workspace/research/EAGstatic/result
+   mkdir -p result/ml result/stats
+   cp "$M"/ml/{epochs.npz,cycles.npz,events.csv,loso_predictions.csv} result/ml/
+   cp "$M"/stats/{grf_eag_pooled.csv,cov_per_subject.csv} result/stats/
+   cp "$M"/ml/crutch_* result/ml/ 2>/dev/null || true     # NAS 1차 결과, 재현 대조용(선택)
+   ```
+2. 마운트가 없으면 ssh rsync (NAS 호스트 경로는 `/volume1/docker/claude-system/workspace/research/EAGstatic/`, 컨테이너 안이라면 ssh 키가 없으니 사용자가 호스트에서 실행):
+   ```bash
+   rsync -avz --relative nas:/volume1/docker/claude-system/workspace/research/EAGstatic/./result/{ml/epochs.npz,ml/cycles.npz,ml/events.csv,ml/loso_predictions.csv,stats/grf_eag_pooled.csv,stats/cov_per_subject.csv} ~/projects/EAGstatic/
+   rsync -avz nas:/volume1/docker/claude-system/workspace/research/EAGstatic/result/ml/crutch_* ~/projects/EAGstatic/result/ml/
+   ```
+둘 다 안 되면 사용자에게 보고하고 멈춰라.
 
 ## 4. 환경 설치
 
+**호스트(지금)**:
+```bash
+./setup_gpu.sh
+source .venv/bin/activate        # 이후 모든 python3 명령은 이 venv 안에서
+```
+apt 기본 패키지(sudo 필요, 비밀번호는 사용자가 입력) → uv → `.venv`(Python 3.12; 26.04 기본 3.13은 torch 휠이 늦을 수 있어 고정) → torch CUDA 12.8 빌드 → `requirements*.txt` → GPU 검증. 멱등이라 다시 실행해도 된다.
+
+**컨테이너(나중)**:
 ```bash
 ./setup_gpu.sh --container
 ```
+이미지의 torch를 그대로 두고 나머지만 `pip --user` 설치, GPU 2장 검증. sudo 불필요.
 
-이 스크립트는 이미지의 torch를 그대로 두고(torch 줄 제외) 나머지 패키지를 `pip --user`로 설치한 뒤 GPU 2장에서 합성곱 연산을 검증한다. sudo 없이 돈다.
-
-**확인 기준**: 마지막에 `GPU 연산 OK (2장)`가 출력. `AssertionError`가 나면 compose의 GPU 할당 문제이므로 보고.
+**확인 기준**: 마지막에 `GPU 연산 OK`가 출력되고 `device_count`가 2. 1이면 `nvidia-smi`에 두 장이 보이는지, `CUDA_VISIBLE_DEVICES`가 설정돼 있지 않은지 확인 후 보고.
 
 ## 5. smoke test (1~2분)
 
@@ -114,11 +131,12 @@ nvidia-smi --query-gpu=index,utilization.gpu,memory.used --format=csv
 - cnn ≥ hybrid 인가(1차: 0.548 vs 0.543).
 - 순열 p: 관측이 null 최댓값보다 크면 p = 1/101 = 0.0099.
 
-마지막으로 사용자에게 보고할 것: 요약 표 2개, 재현 여부 한 줄, 그리고 **호스트에서** 실행할 되돌리기 명령:
+마지막으로 사용자에게 보고할 것: 요약 표 2개, 재현 여부 한 줄, 그리고 결과 되돌리기. rclone 마운트가 있으면 직접 복사해도 된다(마운트에서 허용된 유일한 쓰기):
 ```bash
-rsync -avz ~/projects/EAGstatic/result/ml/crutch_* ~/projects/EAGstatic/result/ml/GPU_RUN_SUMMARY.md nas:/volume1/docker/claude-system/workspace/research/EAGstatic/result/ml/
+cp result/ml/crutch_*_s[12]_* result/ml/crutch_*_perm100_* result/ml/GPU_RUN_SUMMARY.md "$M"/ml/
+# 마운트가 없으면: rsync -avz result/ml/crutch_* result/ml/GPU_RUN_SUMMARY.md nas:/volume1/docker/claude-system/workspace/research/EAGstatic/result/ml/
 ```
-NAS 쪽 문서(계획서 §8, 보고서) 갱신은 NAS의 Claude가 한다. 여기서는 하지 않는다.
+NAS 1차 결과 파일(태그 없는 `crutch_{window}_{model}_summary.json` 등)은 덮어쓰지 말 것. NAS 쪽 문서(계획서 §8, 보고서) 갱신은 NAS의 Claude가 한다. 여기서는 하지 않는다.
 
 ## 9. 참고: 파일 역할
 
