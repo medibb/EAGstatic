@@ -28,7 +28,7 @@ pip install -r requirements.txt
 
 ## 저장소 구조
 
-파이프라인은 **EAG 필터 → EAG+GRF 동기화 → edge/knee 추출 → 파라미터 추출 → 통계**의 흐름을 따릅니다. 2026-07 정리 시 현재 파이프라인(core)과 구코드(`old_code/`)·딥러닝 실험(`dl/`)을 분리했습니다.
+파이프라인은 **EAG 필터 → EAG+GRF 동기화 → edge/knee 추출 → 파라미터 추출 → 통계 → ML**의 흐름을 따릅니다. 2026-07 정리 시 현재 파이프라인(core)과 구코드(`old_code/`)·DL 구 프로토타입(`dl/`, 2026-05, 18명, superseded; 현행은 루트 `ml_*.py`)을 분리했습니다.
 
 ```
 EAGstatic/
@@ -46,6 +46,22 @@ EAGstatic/
 ├── parameter_extractor.py     # Phase 1/2/3 파라미터 추출
 ├── frequency_analyzer.py      # Phase 3 주파수 (parameter_extractor 의존)
 ├── stats_grf_eag.py           # dose-response 통계 (주 분석)
+├── stats_covariates.py        # 공변량 (성별·체성분·순서·품질) 대 피험자 이질성
+│
+├── epoch_extractor.py         # ML 입력: GRF 전이 기준 EAG epoch 분할
+├── ml_decoder.py              # 부하 디코더 (LightGBM, LOSO) + 4단계 순서형 + 순응도 ROC
+├── ml_adherence_sweep.py      # 순응도 판별 임계 스윕 (25~70 %BW 사용 구간)
+├── ml_direction.py            # 방향 디코더 (CSP+LDA, s vs f) + 순열
+├── ml_fbcsp.py                # filter-bank 분석 (부하·방향 정보 주파수대)
+├── ml_eegnet.py               # EEGNet 부하 회귀·방향 분류 (비교군)
+├── ml_match_sets.py           # EEGNet vs LightGBM matched-set 비교
+├── ml_crutch.py               # 목발 route 분류 (c vs s/f): 창 2종 × 모델 4종, LOSO, 순열
+├── ml_crutch_hetero.py        # route 분류 피험자 이질성 vs 공변량
+├── ml_crutch_session.py       # route 분류 세션 단위 집계
+├── ml_crutch_report.py        # route 분류 보고서 그림
+├── run_crutch*.sh             # ml_crutch 배치 러너 (NAS·연휴·GPU)
+├── setup_gpu.sh               # GPU 서버 환경 구성 (--container)
+├── GPU_HANDOFF.md             # GPU 서버 인계 절차
 │
 ├── stats_analyzer.py          # 보조: session-type RM-ANOVA/APA/ICC/effect size
 ├── plot_fsi_verification.py   # 보조: FSI/APA 검증 시각화 (Phase 1 QC)
@@ -58,14 +74,16 @@ EAGstatic/
 │   ├── debug_sync_events*.py       # 디버그
 │   └── validate_sync_*.py          # 구 sync 검증
 │
-├── dl/                        # 딥러닝 실험 (통계 파이프라인과 별도 트랙)
+├── dl/                        # DL 구 프로토타입 (2026-05, 18명, superseded; 현행은 루트 ml_*.py)
 │   ├── dl_dataset.py · dl_models.py · dl_train.py
-│   └── PLAN_dl_analysis.md
+│   └── PLAN_dl_analysis.md    # 상단 superseded 배너 참조
 │
 ├── data/                      # 원본 데이터 (git 제외)
 │   └── 피험자명/OpenBCISession_YYYY-MM-DD/BrainFlow-RAW_*.csv
 └── result/                    # 분석 결과 PNG/JSON (git 제외)
     ├── manual_offsets.json · manual_edges.json
+    ├── ml/                    # ML 산출물 (loso_vs_baselines.csv, adherence_*.csv, crutch_* 등)
+    │   └── gpu_run/           # 3090 2차 실행 (2026-10-02): seed 3개 × 8모델, 순열 100회 × 4조합
     └── 피험자명/…
 ```
 
@@ -93,6 +111,20 @@ EAGstatic/
 > ⚠️ manual review로 offset/edge를 확정한 뒤에는 4단계(`parameter_extractor --batch`)를 **다시 실행**해야 확정값과 `load_pct`·`accepted` 등 최신 컬럼이 반영됩니다.
 > 실험 프로토콜(한발서기 4회 × 부하 시작/이탈 = 8 이벤트)과 판정 기준은 `ANNOTATION_PROTOCOL.md`, 상세 통계 설계는 `STATS_PLAN.md` 참조.
 
+## ML 분석
+
+통계(집단 추론)와 별개로 개체 수준 디코딩 세 가지를 수행했다. 검증은 모두 LOSO(leave-one-subject-out), 입력은 `epoch_extractor.py`가 만든 GRF 전이 기준 EAG epoch. 실행 순서는 `REANALYSIS.md` §1의 5단계(부하·방향·주파수대)와 5b단계(목발 route), GPU 실행은 `GPU_HANDOFF.md`.
+
+| 디코더 | 스크립트 | 결과 (2026-10 현행) |
+|---|---|---|
+| 부하 회귀 (`load_pct`) | `ml_decoder.py`, `ml_adherence_sweep.py` | LightGBM MAE 14.80 %BW, R² 0.517. 순응도 판별(한발서기 단위) 50 %BW AUC 0.951, 사용 가능 구간 25~70 %BW |
+| 방향 분류 (s vs f) | `ml_direction.py`, `ml_fbcsp.py` | CSP+LDA 0.551 ± 0.069 (감사 후 41명, HP 0.10 Hz), 순열 p < 0.01. 유의하나 실용 미달 |
+| 목발 route 분류 (c vs s/f) | `ml_crutch.py` 계열, `run_crutch*.sh` | compact CNN bacc 0.547 ± 0.062, 순열 100회 p = 0.0099. LSTM/Transformer 이득 없음, event ≈ cycle 창 |
+
+- `ml_eegnet.py`·`ml_match_sets.py`는 EEGNet 비교군(부하 회귀 matched-set MAE 14.82, LightGBM 14.78 대비 p 0.92, 이득 없음).
+- 산출물은 `result/ml/`, 3090 2차 실행분은 `result/ml/gpu_run/`. 수치 정본과 문서 갱신 내역은 `obsidian/claudeanswer/EAG ML 문서 갱신 점검표 2026-10-03.md` §0.
+- `dl/`은 2026-05 18명 프로토타입(superseded)이며 현행 결과에 쓰이지 않는다.
+
 ## 문서 안내
 
 | 문서 | 역할 | 대상 |
@@ -102,6 +134,7 @@ EAGstatic/
 | **이 문서** | 코드 구조, 파이프라인, CLI | 개발·재현 |
 | `STATS_PLAN.md` | 통계 설계 (dose-response) | 분석 |
 | **`REANALYSIS.md`** | **annotation 확정 후 재분석 순서와 문서 갱신 체크리스트** | 확정 이후 |
+| `GPU_HANDOFF.md` | GPU 서버(3090×2) 인계 절차: 환경 구성, 풀 러너, 결과 회수 | ML 재실행 |
 
 > 판정 기준은 `ANNOTATION_PROTOCOL.md` **한 곳에만** 존재합니다. 다른 문서는 링크만 하고
 > 기준을 다시 쓰지 않습니다. 기준을 고칠 때는 그 문서만 고치면 됩니다.

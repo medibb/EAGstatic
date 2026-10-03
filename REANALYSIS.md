@@ -64,7 +64,8 @@ python3 ml_crutch_hetero.py                 # 피험자별 구분 가능도 vs �
 python3 ml_crutch_report.py                 # 보고서 그림 8장 → result/ml/fig/, obsidian/images/eag_crutch/
 python3 ml_crutch_session.py                # 세션·방문 단위 집계 (학습 없음)
 python3 ml_adherence_sweep.py               # 순응도 문턱 10~95 %BW sweep + fig9 (Table 4.11 확장)
-./run_crutch_holiday.sh                     # seed 재현 + 순열 추가 (NAS ~57 h). 3090 복구 시 run_crutch_gpu.sh
+./run_crutch_holiday.sh                     # seed 재현 + 순열 추가 (NAS ~57 h)
+# 3090: GPU_HANDOFF.md 절차. 결과는 result/ml/gpu_run/ (2026-10-02, 16-worker 풀 8 h, 순열 100 × 4조합 모두 p<0.01)
 
 # 6) 신뢰도 (파일럿 rater 작업이 끝난 뒤)
 python3 reliability_pilot.py report --a rater_main --b rater_rel
@@ -137,8 +138,8 @@ SNR이 바뀌면 `volume_conductor.py localize --snr <새 값>` 을 다시 돌�
 - [ ] 4.3.1 test-retest **ICC·MDC95** (현재 기울기 0.463 / 진폭 0.661 / MDC95 1.784)
 - [ ] 4.3.2 **dose-response** 계수. 구 abs_step 모형(75.03) → load_pct 모형(1.591)으로
       이미 교체 권고됨. **분산성분 문장은 부등호가 뒤집히므로 반드시 재작성**
-- [ ] 4.3.3~4.3.4 **ML 수치** (MAE 15.17 %BW, R² 0.504, 전이 15.16, AUC 0.942, CSP 0.547)
-- [ ] 4.3.5 **offloading route 분류 (신설)** — 2026-09-20 1차: event/cycle 창 모두 compact CNN(697 par) bacc 0.547 ± 0.062 (순열 null 0.498 ± 0.006, 20회 최대 0.513), LSTM/Transformer 추가 시 하락(hybrid 23K par 0.531), load·duration 매칭 후 불변, 피험자 이질성은 성별·체성분·세션 순서·채널 품질로 설명 안 됨(Holm 후 전부 n.s.). 서술 방향: "route 불변성이 주 결론, 약한 잔여 성분". 상세 `obsidian/claudeanswer/EAG 목발분류 DL 계획 2026-09-19.md` §8~9. cycle 창 lgb 순열 결과 확정 후 수치 최종화
+- [x] 4.3.3~4.3.4 **ML 수치** — 2026-10-03 확인: 논문은 이미 현재값(MAE 14.80 / R² 0.517 / 전이 14.99≈14.97 / AUC 0.951 / CSP 0.551). Table 4.13 EEGNet은 matched-set 14.82로 정의 명시, §4.4.9 14.90 → 14.82 통일, Table 4.11에 사용 가능 구간 25~70 %BW 추가
+- [x] **4.3.7 offloading route 분류 (신설, 2026-10-03 반영)** — Table 4.21·Figure 4.11~4.12. compact CNN bacc 0.547 ± 0.062(event) / 0.545(cycle), 순열 100회 p = 0.0099(NAS·3090 독립 반복), LSTM/Transformer 이득 없음(하락이라 쓰지 않음), load·duration 매칭 후 불변, 피험자 이질성 공변량 무관, 세션 단위 0.573. Discussion §4.4.4 두 문단, Limitations #10 보강·#11 신설, §4.5·§5.1·§5.3.3·§5.7 한 줄씩. 번호 충돌을 피해 4.3 끝(4.3.7)에 배치. 상세 `obsidian/claudeanswer/EAG 목발분류 DL 계획 2026-09-19.md` §8~9, 보고서 2026-09-20
 - [ ] 4.2.7 annotation reliability의 `[n]`·`[k]` 플레이스홀더 → 파일럿 결과
 - [ ] 4.2.3 취득 문단의 **세션·채널 수** (구 "416 sessions, 3,328 channels")
 - [ ] 4.2.6 / 4.3 서두의 **방문 수 불일치** (81 대 79)
