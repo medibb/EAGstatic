@@ -15,7 +15,7 @@ worklist는 edge_app이 읽어 드롭다운에 "검토 필요"로 표시하므�
 열어 knee를 추가/삭제/이동해 8개를 맞추면 된다 (manual_edges.json이 최우선).
 
 주의: offset이 먼저 확정돼 있어야 한다(te_corr 기준으로 edge가 저장되므로).
-      REVIEW_WORKFLOW.md의 "offset 먼저, edge 나중" 원칙.
+      ANNOTATION_PROTOCOL.md §7의 "offset 먼저, edge 나중" 불변식.
 """
 
 import argparse
