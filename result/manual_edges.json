@@ -57,5 +57,137 @@
         "note": "gui edit"
       }
     }
+  },
+  "(02.02_10)주창민_1": {
+    "c1": {
+      "2": {
+        "edges": [
+          {
+            "onset_time": 9.132,
+            "onset_amp": -69.1,
+            "offset_time": 10.336,
+            "offset_amp": 20.5
+          },
+          {
+            "onset_time": 14.032,
+            "onset_amp": 31.2,
+            "offset_time": 14.344,
+            "offset_amp": 18.4
+          },
+          {
+            "onset_time": 19.344,
+            "onset_amp": 26.2,
+            "offset_time": 19.788,
+            "offset_amp": 61.1
+          },
+          {
+            "onset_time": 24.884,
+            "onset_amp": 83.1,
+            "offset_time": 25.66,
+            "offset_amp": 21.7
+          },
+          {
+            "onset_time": 29.26,
+            "onset_amp": 33.7,
+            "offset_time": 30.2,
+            "offset_amp": 89.9
+          },
+          {
+            "onset_time": 33.76,
+            "onset_amp": 114.1,
+            "offset_time": 35.608,
+            "offset_amp": -281.7
+          },
+          {
+            "onset_time": 39.268,
+            "onset_amp": -161.4,
+            "offset_time": 41.052,
+            "offset_amp": 98.4
+          },
+          {
+            "onset_time": 44.732,
+            "onset_amp": 108.4,
+            "offset_time": 46.152,
+            "offset_amp": -336.4
+          },
+          {
+            "onset_time": 49.892,
+            "onset_amp": -308.7,
+            "offset_time": 51.136,
+            "offset_amp": 138.2
+          },
+          {
+            "onset_time": 56.884,
+            "onset_amp": 77.2,
+            "offset_time": 55.836,
+            "offset_amp": 134.9
+          }
+        ],
+        "offset_used": -0.4,
+        "updated_at": "2026-10-12T15:34:12",
+        "note": "gui edit"
+      },
+      "3": {
+        "edges": [
+          {
+            "onset_time": 9.216,
+            "onset_amp": -47,
+            "offset_time": 10.388,
+            "offset_amp": 50.7
+          },
+          {
+            "onset_time": 13.768,
+            "onset_amp": 56.6,
+            "offset_time": 14.52,
+            "offset_amp": 36.9
+          },
+          {
+            "onset_time": 19.38,
+            "onset_amp": 16.2,
+            "offset_time": 19.856,
+            "offset_amp": 53.7
+          },
+          {
+            "onset_time": 24.58,
+            "onset_amp": 60.6,
+            "offset_time": 25.736,
+            "offset_amp": -32.7
+          },
+          {
+            "onset_time": 29.376,
+            "onset_amp": -36.3,
+            "offset_time": 30.14,
+            "offset_amp": 53.8
+          },
+          {
+            "onset_time": 33.964,
+            "onset_amp": 70.8,
+            "offset_time": 35.488,
+            "offset_amp": -326.1
+          },
+          {
+            "onset_time": 39.46,
+            "onset_amp": -188.3,
+            "offset_time": 41.332,
+            "offset_amp": 94.9
+          },
+          {
+            "onset_time": 44.9,
+            "onset_amp": 79.1,
+            "offset_time": 46.144,
+            "offset_amp": -363.7
+          },
+          {
+            "onset_time": 49.88,
+            "onset_amp": -304.3,
+            "offset_time": 51.172,
+            "offset_amp": 133.1
+          }
+        ],
+        "offset_used": -0.42,
+        "updated_at": "2026-10-12T15:37:39",
+        "note": "gui edit"
+      }
+    }
   }
 }
