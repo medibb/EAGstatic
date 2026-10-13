@@ -15,7 +15,9 @@ manual_edges.json에 바로 저장 → parameter_extractor가 자동 반영.
 브라우저에서:
   - 세션 디렉터리 + 채널 입력 후 Load
   - knee 점을 드래그해 이동 / [Add]모드로 트레이스 2점 클릭해 edge 추가 / edge 선택 후 Delete
-  - Snap 체크 시 corner 자동 정렬 / Save로 확정, Reset으로 자동검출 복귀
+  - Snap 체크 시 corner 자동 정렬 (체크를 풀면 클릭한 위치 그대로) / Save로 확정, Reset으로 자동검출 복귀
+  - 편집하면 /api/validate로 판정·누락·cycle 표를 즉시 다시 계산한다 (Save 전까지는 화면만)
+  - 커서를 따라가는 수직선이 같은 시각의 EAG·GRF 위치를 잇는다
 """
 
 import argparse
@@ -61,6 +63,28 @@ def _ds(a, step):
     return a[::step]
 
 
+# GUI에 내려보내는 검증 요약의 키. build_data와 revalidate가 같은 모양을 보내야
+# 클라이언트가 둘을 구분 없이 D.valid에 넣을 수 있다.
+_VALID_KEYS = ('ok', 'n_cycles', 'n_matched', 'n_events', 'n_edges',
+               'n_measured_cycles', 'reasons', 'priority', 'labels',
+               'n_single_sided')
+
+# (session_dir, channel) → (cycles, trans). 편집 후 재검증에서 재사용한다.
+# cycle·anchor는 GRF만으로 정해지므로 EAG edge를 고쳐도 변하지 않는다. 반면 다시
+# 구하려면 SyncAnalyzer로 세션을 통째로 다시 읽어야 해서 수 초가 걸린다 — knee를
+# 하나 옮길 때마다 그럴 수는 없다. 세션당 cycle 4개·transition 16개 수준이라 작다.
+_GRF_CACHE = {}
+_GRF_CACHE_MAX = 64
+
+
+def _cache_put(key, value):
+    """삽입 순서를 이용한 단순 LRU. dict가 순서를 보존하므로 가장 오래된 것을 버린다."""
+    _GRF_CACHE.pop(key, None)
+    _GRF_CACHE[key] = value
+    while len(_GRF_CACHE) > _GRF_CACHE_MAX:
+        _GRF_CACHE.pop(next(iter(_GRF_CACHE)))
+
+
 def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
     from scipy.signal import detrend
     pair = find_session_pair(session_dir)
@@ -78,6 +102,7 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
     rest, cycles, cyc_info = G.detect_load_cycles_expected(
         tg, signed, sa.grf_left, sa.grf_right)
     anchors = G.cycles_to_transitions(cycles, trans)
+    _cache_put((session_dir, channel), (cycles, trans))
 
     man = edge_store.get_channel_edges(pair.subject_name, pair.session_name, channel)
     if man is not None:
@@ -120,9 +145,7 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
         'n_measured_cycles': valid['n_measured_cycles'],
         'anchors': [{'t': round(a.time, 3), 'kind': 'on' if i % 2 == 0 else 'off',
                      'cycle': i // 2} for i, a in enumerate(anchors)],
-        'valid': {k: valid[k] for k in ('ok', 'n_cycles', 'n_matched', 'n_events',
-                                        'n_edges', 'n_measured_cycles', 'reasons',
-                                        'priority', 'labels', 'n_single_sided')},
+        'valid': {k: valid[k] for k in _VALID_KEYS},
         'events': valid['events'],
         'expected_cycles': G.EXPECTED_CYCLES, 'expected_events': G.EXPECTED_EVENTS,
         'te': r3(_ds(te, step)), 'eag': r1(_ds(eag, step)),
@@ -132,6 +155,39 @@ def build_data(session_dir: str, channel: int, recompute: bool = True) -> dict:
                    'offset_time': round(e['offset_time'], 3), 'offset_amp': round(e['offset_amp'], 1)}
                   for e in edges],
     }
+
+
+def revalidate(session_dir: str, channel: int, edges: list) -> dict:
+    """편집 중인 edge 목록을 그 세션의 cycle·anchor에 **다시** 매칭한다 (디스크 쓰기 없음).
+
+    GUI가 edge를 지우거나 옮기면 서버가 Load 시점에 준 events/noise_idx의 인덱스가
+    어긋난다. 예컨대 `노이즈 삭제`로 0번 edge가 빠지면 이후 인덱스가 전부 1씩 당겨져
+    판정 라벨('c1부하' 등)이 **한 칸씩 밀려** 보인다. 저장된 값은 멀쩡하지만, 밀린
+    라벨을 보고 knee를 고치면 그때 실제 오염이 생긴다.
+
+    매칭 자체는 순서가 아니라 anchor 시각 ±창 + 방향 규칙이므로(match_edge),
+    같은 함수를 다시 돌리면 그만이다. Save→재로드를 기다릴 이유가 없다.
+
+    edges 순서는 **그대로 쓴다.** events[].edge_idx가 이 배열의 인덱스이므로
+    서버가 정렬해 버리면 클라이언트 화면과 인덱스가 어긋난다.
+    """
+    key = (session_dir, int(channel))
+    got = _GRF_CACHE.get(key)
+    if got is None:
+        # 앱 재시작 직후 첫 편집 등. 느리지만(세션 재로드) 정확하다.
+        build_data(session_dir, int(channel))
+        got = _GRF_CACHE.get(key)
+        if got is None:
+            raise RuntimeError(f'cycle 정보를 구할 수 없음: {session_dir} ch{channel}')
+    cycles, trans = got
+
+    e_on = np.array([float(e['onset_time']) for e in edges]) if edges else np.array([])
+    e_amp = (np.array([float(e['offset_amp']) - float(e['onset_amp']) for e in edges])
+             if edges else np.array([]))
+    v = G.validate_cycle_edges(cycles, e_on, e_amp, raw_trans=trans)
+    return {'per_cycle': v['per_cycle'], 'noise_idx': v['noise_idx'],
+            'n_measured_cycles': v['n_measured_cycles'], 'events': v['events'],
+            'valid': {k: v[k] for k in _VALID_KEYS}}
 
 
 def load_worklist() -> list:
@@ -277,6 +333,10 @@ class Handler(BaseHTTPRequestHandler):
                     payload['subject'], payload['session'], ch,
                     reason=payload.get('reason', '기타'), note=payload.get('note', ''))
                 return self._send(200, json.dumps({'ok': True}))
+            if u.path == '/api/validate':
+                return self._send(200, json.dumps(revalidate(
+                    payload.get('session', ''), int(payload.get('channel', 1)),
+                    payload.get('edges') or [])))
             if u.path == '/api/reset':
                 ok = edge_store.clear_channel_edges(
                     payload['subject'], payload['session'], int(payload['channel']))
@@ -294,7 +354,7 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
  button{cursor:pointer;border:1px solid #bbb;background:#fff;border-radius:4px}
  button.on{background:#1f77b4;color:#fff}
  #status{margin-left:8px;color:#333}
- canvas{border:1px solid #ccc;background:#fff;display:block;touch-action:none}
+ canvas{border:1px solid #ccc;background:#fff;display:block;touch-action:none;cursor:crosshair}
  #tip{font-size:12px;color:#666;margin:4px 0}
  table{border-collapse:collapse;font-size:12px;margin-top:6px}
  td,th{border:1px solid #ddd;padding:2px 6px}
@@ -341,7 +401,9 @@ HTML = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <div id="tip">드래그=knee 이동 · Add mode 후 트레이스 2점 클릭=edge 추가 · edge 클릭 선택 후 Delete/Del키 · rise=빨강 fall=초록
 <br><b>휠=확대/축소</b>(커서 기준) · <b>빈 공간 드래그=좌우 이동</b>(Shift+드래그·휠버튼도 가능) · <b>Shift+휠</b>=좌우 이동
  · <b>← →</b> 이동, <b>Shift+← →</b> 이전/다음 이벤트로 점프, <b>Home/End</b> 처음/끝, <b>f</b> 전체보기 · 확대할수록 snap 범위도 좁아져 정밀해진다
-<br>주황 음영=체중부하 cycle(프로토콜 4회) · 세로 점선=분석 anchor 8개(빨강=부하 시작, 파랑=이탈) · <b class="bad">굵은 빨강="누락"</b>=그 anchor에 knee가 없음 → 그 자리에 edge를 추가하세요</div>
+<br>주황 음영=체중부하 cycle(프로토콜 4회) · 세로 점선=분석 anchor 8개(빨강=부하 시작, 파랑=이탈) · <b class="bad">굵은 빨강="누락"</b>=그 anchor에 knee가 없음 → 그 자리에 edge를 추가하세요
+<br><b>커서 수직선</b>=같은 시각이 EAG·GRF에서 어디인지 표시(t · EAG 진폭 · 가장 가까운 anchor까지 Δt) · knee를 변곡점이 아닌 임의 위치에 두려면 <b>snap 체크해제</b>
+ · 편집하면 판정·누락·cycle 표가 즉시 다시 계산된다(<b class="warn">✎ 미저장 변경</b> 표시) — 확정은 Save</div>
 <canvas id="cv" width="1400" height="600"></canvas>
 <div id="meta"></div><div id="tbl"></div>
 <script>
@@ -350,8 +412,9 @@ const BASE=(()=>{let p=location.pathname; if(/\.[a-z]+$/i.test(p))p=p.replace(/[
  return p.endsWith('/')?p:p+'/';})();
 const api=p=>BASE+p;
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-let D=null, sel=-1, addPts=[], addMode=false, drag=null;
+let D=null, sel=-1, addPts=[], addMode=false, drag=null, dirty=false;
 let view=null, pan=null;                    // view=[t0,t1] 표시 구간, pan=이동 중 상태
+let hoverX=null;                            // 커서 수직선의 x (캔버스 밖이면 null)
 const M={l:55,r:15,t:15,b:34}, GH=140; // GRF strip height
 function fitView(){view=[D.te[0], D.te[D.te.length-1]];}
 function dataRange(){return [D.te[0], D.te[D.te.length-1]];}
@@ -439,8 +502,30 @@ function draw(){ if(!D||!view)return; ctx.clearRect(0,0,cv.width,cv.height);
   ctx.fillStyle=nz?'#999':'#000';ctx.font='11px sans-serif';ctx.fillText('['+k+']',x1-16,y1-4);});
  // add points
  ctx.fillStyle='#ff7f0e';addPts.forEach(p=>{ctx.beginPath();ctx.arc(X(p[0]),EY(p[1]),5,0,7);ctx.fill();});
+ // 커서 수직선 — 같은 시각이 EAG와 GRF에서 어디인지 한 줄로 잇는다 (offset_app과 동일).
+ // 두 패널이 같은 x축이므로 한 줄로 관통한다. 읽어주는 값은 rater가 실제로 판단하는 것:
+ // 커서 시각, 그 지점의 EAG 진폭, 가장 가까운 anchor까지의 Δt.
+ if(hoverX!==null&&hoverX>=M.l&&hoverX<=M.l+PW()){
+  vline(hoverX,M.t,cv.height-M.t-M.b,'rgba(0,0,0,.22)');
+  const t=Tinv(hoverX);
+  let d='';
+  const ats=D.anchors||[];
+  if(ats.length){let bn=ats[0];
+   ats.forEach(x=>{if(Math.abs(x.t-t)<Math.abs(bn.t-t))bn=x;});
+   const dt=t-bn.t;
+   d=' · c'+(bn.cycle+1)+(bn.kind==='on'?'부하':'이탈')+' Δ'+(dt>=0?'+':'')+dt.toFixed(3)+'s';}
+  const s='t='+t.toFixed(3)+'s · EAG '+ampAt(t).toFixed(1)+d;
+  ctx.font='11px sans-serif';ctx.textAlign='left';
+  const w=ctx.measureText(s).width+8, bx=Math.min(hoverX+6,M.l+PW()-w);
+  ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(bx-4,gy0+3,w,15);
+  ctx.fillStyle='#333';ctx.fillText(s,bx,gy0+14);}
  renderTbl();
 }
+// hover는 마우스를 움직일 때마다 다시 그리므로 프레임당 1회로 묶는다 (edge_app은
+// 다운샘플 후에도 EAG·GRF 합쳐 수만 점을 그린다).
+let rafPending=false;
+function drawSoon(){if(rafPending)return;rafPending=true;
+ requestAnimationFrame(()=>{rafPending=false;draw();});}
 function hitKnee(mx,my){for(let k=0;k<D.edges.length;k++){let e=D.edges[k];
   for(const kn of ['on','off']){let t=kn==='on'?e.onset_time:e.offset_time,v=kn==='on'?e.onset_amp:e.offset_amp;
    if(Math.hypot(mx-X(t),my-EY(v))<9)return{k,kn};}}return null;}
@@ -449,7 +534,7 @@ function hitEdge(mx,my){for(let k=0;k<D.edges.length;k++){let e=D.edges[k];let x
 cv.addEventListener('mousedown',ev=>{if(!D)return;let r=cv.getBoundingClientRect(),mx=ev.clientX-r.left,my=ev.clientY-r.top;
  if(ev.shiftKey||ev.button===1){pan={x:mx,v0:[...view]};ev.preventDefault();return;}   // 좌우 이동
  if(addMode){let t=Tinv(mx);let[st,sv]=snapCorner(t);addPts.push([st,sv]);
-   if(addPts.length===2){addPts.sort((p,q)=>p[0]-q[0]);D.edges.push({onset_time:addPts[0][0],onset_amp:addPts[0][1],offset_time:addPts[1][0],offset_amp:addPts[1][1]});D.edges.sort((p,q)=>p.onset_time-q.onset_time);addPts=[];setAdd(false);}
+   if(addPts.length===2){addPts.sort((p,q)=>p[0]-q[0]);D.edges.push({onset_time:addPts[0][0],onset_amp:addPts[0][1],offset_time:addPts[1][0],offset_amp:addPts[1][1]});D.edges.sort((p,q)=>p.onset_time-q.onset_time);addPts=[];setAdd(false);draw();edited();return;}
    draw();return;}
  let h=hitKnee(mx,my); if(h){drag=h;sel=h.k;draw();return;}
  let ek=hitEdge(mx,my);
@@ -457,14 +542,17 @@ cv.addEventListener('mousedown',ev=>{if(!D)return;let r=cv.getBoundingClientRect
  pan={x:mx,v0:[...view],moved:false};    // 빈 공간 드래그 = 좌우 이동 (클릭만 하면 선택 해제)
  ev.preventDefault();});
 cv.addEventListener('mousemove',ev=>{if(!D)return;let r=cv.getBoundingClientRect(),mx=ev.clientX-r.left;
+ hoverX=mx;
  if(pan){const dx=mx-pan.x; if(Math.abs(dx)>3)pan.moved=true;
   let dt=dx/PW()*(pan.v0[1]-pan.v0[0]);view=[pan.v0[0]-dt,pan.v0[1]-dt];clampView();draw();return;}
- if(!drag)return;let t=Tinv(mx);
+ if(!drag){drawSoon();return;}
+ let t=Tinv(mx);
  let[st,sv]=snapCorner(t);let e=D.edges[drag.k];if(drag.kn==='on'){e.onset_time=st;e.onset_amp=sv;}else{e.offset_time=st;e.offset_amp=sv;}draw();});
+cv.addEventListener('mouseleave',()=>{hoverX=null;if(D)drawSoon();});
 window.addEventListener('mouseup',()=>{
  if(pan&&!pan.moved&&sel>=0){sel=-1;draw();}   // 빈 공간 클릭(이동 없음) = 선택 해제
  pan=null;
- if(drag){D.edges.sort((p,q)=>p.onset_time-q.onset_time);drag=null;draw();}});
+ if(drag){D.edges.sort((p,q)=>p.onset_time-q.onset_time);drag=null;draw();edited();}});
 // 휠 = 커서 위치 기준 가로축 확대/축소
 cv.addEventListener('wheel',ev=>{if(!D||!view)return;ev.preventDefault();
  let r=cv.getBoundingClientRect(),mx=ev.clientX-r.left; if(mx<M.l||mx>M.l+PW())return;
@@ -472,7 +560,7 @@ cv.addEventListener('wheel',ev=>{if(!D||!view)return;ev.preventDefault();
  let t=Tinv(mx),f=ev.deltaY>0?1.2:1/1.2;
  view=[t-(t-view[0])*f, t+(view[1]-t)*f]; clampView(); draw();},{passive:false});
 window.addEventListener('keydown',ev=>{if(ev.target.tagName==='INPUT')return;
- if(ev.key==='Delete'&&sel>=0){D.edges.splice(sel,1);sel=-1;draw();}
+ if(ev.key==='Delete'&&sel>=0){D.edges.splice(sel,1);sel=-1;draw();edited();}
  if(ev.key==='f'&&D){fitView();draw();}
  if(ev.key==='ArrowLeft'){ev.preventDefault(); ev.shiftKey?gotoEvent(-1):panBy(-0.25);}
  if(ev.key==='ArrowRight'){ev.preventDefault(); ev.shiftKey?gotoEvent(1):panBy(0.25);}
@@ -500,25 +588,36 @@ document.getElementById('denoise').onclick=()=>{if(!D)return;
  const nz=(D.noise_idx||[]).slice().sort((a,b)=>b-a);
  if(!nz.length){status('노이즈로 판정된 edge 없음');return;}
  nz.forEach(i=>D.edges.splice(i,1)); D.noise_idx=[]; sel=-1;
- status(nz.length+'개 삭제 — Save로 확정하세요'); draw();};
+ status(nz.length+'개 삭제 — Save로 확정하세요'); draw(); edited();};
+// 편집 후 재검증 — 서버에 현재 edge 목록을 보내 판정/누락/cycle 표를 다시 받는다.
+// 이것 없이 클라이언트에서 edge만 지우면, 서버가 Load 때 준 events[].edge_idx가
+// 당겨진 인덱스를 가리켜 판정 라벨이 한 칸씩 밀려 보인다.
+let vseq=0;
+async function revalidate(){
+ if(!D)return; const my=++vseq;
+ let j;
+ try{const r=await fetch(api('api/validate'),{method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({session:document.getElementById('sess').value,
+                        channel:D.channel,edges:D.edges})});
+  j=await r.json();}
+ catch(e){status('재검증 실패(통신) — Save 후 재로드하면 맞습니다');return;}
+ if(my!==vseq)return;                 // 더 최근 편집이 있다 → 늦게 온 이 응답은 버린다
+ if(j.error){status('재검증 실패: '+j.error);return;}
+ D.events=j.events; D.per_cycle=j.per_cycle; D.noise_idx=j.noise_idx;
+ D.valid=j.valid; D.n_measured_cycles=j.n_measured_cycles;
+ renderMeta(); draw();
+}
+function markDirty(){dirty=true;}
+function edited(){markDirty();revalidate();}   // 편집 직후 공통 처리
 function setAdd(v){addMode=v;addPts=[];document.getElementById('addmode').classList.toggle('on',v);}
 document.getElementById('addmode').onclick=()=>setAdd(!addMode);
-document.getElementById('del').onclick=()=>{if(sel>=0){D.edges.splice(sel,1);sel=-1;draw();}};
+document.getElementById('del').onclick=()=>{if(sel>=0){D.edges.splice(sel,1);sel=-1;draw();edited();}};
 document.getElementById('load').onclick=load;
 async function load(){let s=document.getElementById('sess').value,ch=document.getElementById('ch').value;
  status('loading...');let res=await fetch(api('api/data?session='+encodeURIComponent(s)+'&channel='+ch));
  let j=await res.json(); if(j.error){status('ERR: '+j.error);return;} D=j;sel=-1;addPts=[];setAdd(false);fitView();
- const v=D.valid||{};
- document.getElementById('meta').innerHTML=
-  `${D.subject}/${D.session} ch${D.channel} · source=${D.source} · offset corr=${D.corrected_offset} (${D.method})`+
-  `<br><b class="${v.priority==='high'?'bad':(v.priority==='low'?'warn':'ok')}">`+
-  `${v.priority==='high'?'⚠️ 검토 필요':(v.priority==='low'?'🟡 후순위 검토(한쪽만 채택)':'✅ 프로토콜 충족')}</b>`+
-  (v.labels?` <span class="warn">${v.labels}</span>`:'')+
-  (D.excluded?` <b class="bad">⛔ 분석제외(${D.excluded.scope==='session'?'세션':'채널'}: ${D.excluded.reason}${D.excluded.note?', '+D.excluded.note:''})</b>`:'')+
-  ` — cycle ${v.n_cycles}/${D.expected_cycles} · 측정가능 cycle ${v.n_measured_cycles}/${v.n_cycles}`+
-  ` · 이벤트 ${v.n_matched}/${v.n_events} · edge ${v.n_edges}개`+
-  ((D.noise_idx||[]).length?` · <span class="bad">노이즈 후보 ${D.noise_idx.length}개</span>`:'')+
-  (v.reasons?` · <span class="bad">${v.reasons}</span>`:'');
+ dirty=false; renderMeta();
  const ex=D.excluded;
  document.getElementById('exclCh').textContent=(ex&&ex.scope==='channel')?'⛔ 채널 제외해제':'⛔ 채널 제외';
  document.getElementById('exclSes').textContent=(ex&&ex.scope==='session')?'⛔ 세션 제외해제':'⛔ 세션 제외';
@@ -527,6 +626,19 @@ document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fet
  status('✅ saved '+j.n+' edges');await load();refreshList();};   // 재검증 위해 재로드
 document.getElementById('reset').onclick=async()=>{if(!D)return;await fetch(api('api/reset'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});await load();refreshList();};
 function status(t){document.getElementById('status').textContent=t;}
+// Load과 재검증이 같은 요약을 그린다 (편집 중에도 수치가 실제 edge 목록과 맞게).
+function renderMeta(){ if(!D)return; const v=D.valid||{};
+ document.getElementById('meta').innerHTML=
+  `${D.subject}/${D.session} ch${D.channel} · source=${D.source} · offset corr=${D.corrected_offset} (${D.method})`+
+  (dirty?` <b class="warn">✎ 미저장 변경</b>`:'')+
+  `<br><b class="${v.priority==='high'?'bad':(v.priority==='low'?'warn':'ok')}">`+
+  `${v.priority==='high'?'⚠️ 검토 필요':(v.priority==='low'?'🟡 후순위 검토(한쪽만 채택)':'✅ 프로토콜 충족')}</b>`+
+  (v.labels?` <span class="warn">${v.labels}</span>`:'')+
+  (D.excluded?` <b class="bad">⛔ 분석제외(${D.excluded.scope==='session'?'세션':'채널'}: ${D.excluded.reason}${D.excluded.note?', '+D.excluded.note:''})</b>`:'')+
+  ` — cycle ${v.n_cycles}/${D.expected_cycles} · 측정가능 cycle ${v.n_measured_cycles}/${v.n_cycles}`+
+  ` · 이벤트 ${v.n_matched}/${v.n_events} · edge ${v.n_edges}개`+
+  ((D.noise_idx||[]).length?` · <span class="bad">노이즈 후보 ${D.noise_idx.length}개</span>`:'')+
+  (v.reasons?` · <span class="bad">${v.reasons}</span>`:'');}
 function renderTbl(){const noise=new Set(D.noise_idx||[]);
  const mt=new Map((D.events||[]).filter(e=>e.edge_idx>=0).map(e=>[e.edge_idx,'c'+(e.cycle+1)+(e.kind==='on'?'부하':'이탈')]));
  let h='<table><tr><th>id</th><th>onset</th><th>offset</th><th>amp</th><th>dir</th><th>판정</th></tr>';
