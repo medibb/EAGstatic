@@ -1306,6 +1306,13 @@
       "auto_method": "large-offset review (edge-align=+9.76)",
       "updated_at": "2026-10-13T00:37:31",
       "note": "gui point-pick"
+    },
+    "c2": {
+      "manual_offset": -5.424,
+      "auto_offset": -7.224,
+      "auto_method": "large-offset review (edge-align=-5.92)",
+      "updated_at": "2026-10-14T06:59:01",
+      "note": "gui point-pick"
     }
   },
   "(02.04_10)이혜린_1": {
@@ -1694,10 +1701,10 @@
       "note": "gui point-pick"
     },
     "s2": {
-      "manual_offset": -0.497,
-      "auto_offset": -0.397,
+      "manual_offset": -0.477,
+      "auto_offset": -0.497,
       "auto_method": "auto (recompute off)",
-      "updated_at": "2026-10-13T00:36:42",
+      "updated_at": "2026-10-14T06:59:59",
       "note": "gui point-pick"
     }
   },
@@ -2794,6 +2801,13 @@
       "auto_method": "grf-edge-align (7/10, med=+0.07s)",
       "updated_at": "2026-09-28T16:18:41",
       "note": "gui point-pick"
+    },
+    "s5": {
+      "manual_offset": -3.028,
+      "auto_offset": -1.268,
+      "auto_method": "auto (recompute off)",
+      "updated_at": "2026-10-14T07:01:56",
+      "note": "gui point-pick"
     }
   },
   "(02.09_15)김현진_2": {
@@ -3717,6 +3731,13 @@
       "auto_method": "grf-edge-align (7/10, med=+0.03s)",
       "updated_at": "2026-10-13T00:38:38",
       "note": "gui point-pick"
+    },
+    "c1": {
+      "manual_offset": -0.277,
+      "auto_offset": 4.02,
+      "auto_method": "large-offset review (edge-align=+4.58)",
+      "updated_at": "2026-10-14T07:03:10",
+      "note": "gui point-pick"
     }
   },
   "(02.13_10)이혜린_2": {
@@ -4111,6 +4132,13 @@
       "auto_offset": -0.284,
       "auto_method": "fallback-xcorr (auto-ok)",
       "updated_at": "2026-10-12T06:40:34",
+      "note": "gui point-pick"
+    },
+    "s2": {
+      "manual_offset": -0.116,
+      "auto_offset": 0.084,
+      "auto_method": "grf-edge-align (4/10, med=-0.01s)",
+      "updated_at": "2026-10-14T07:04:25",
       "note": "gui point-pick"
     }
   },
