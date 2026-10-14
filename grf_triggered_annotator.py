@@ -172,6 +172,49 @@ EXPECTED_EVENTS = 8          # = EXPECTED_CYCLES × 2 (부하 시작/종료)
 EXPECTED_DIR = {'on': 'fall', 'off': 'rise'}
 NOISE_MARGIN = 1.2           # anchor에서 이만큼(초) 넘게 떨어진 edge만 노이즈로 본다
 
+# anchor 대비 edge onset의 허용 창. 이 창 안의 edge만 그 이벤트의 반응으로 집계된다.
+# **알고리즘 파라미터**이고 주석 허용 오차와는 다른 것이다 (ANNOTATION_PROTOCOL.md §5.3).
+#
+# 2026-10-14: 하한을 -0.5 → -0.8로 넓혔다. 근거(전 세션 anchor 67,984개, PASS 51,704개,
+# `tools/window_sensitivity.py`):
+#   - 현행 창에서 미검출 5.5%, 그중 2.7%는 창 **밖**(지연 중위 -0.65초)에 방향 규칙을
+#     만족하는 edge를 갖고 있었다. 하한을 -0.8로 하면 941개가 회수된다(94.5% → 96.3%).
+#   - 회수되는 -0.9~-0.5초 띠(1,026건)의 진폭은 체중부하율에 +1.351 µV/%BW로 비례했다.
+#     매칭된 주 반응(+1.304, r²=0.147)과 구별되지 않는다 → 같은 현상이다.
+#     반면 양(+)쪽 창 밖(+1.5~+3.5초, 73건)은 부하 의존성이 없다(p=0.48) → 노이즈.
+#     그래서 **하한만** 넓히고 상한은 그대로 둔다.
+#   - walk-back 산물이 아니다. transition_time이 매칭된 것과 다르지 않다
+#     (중위 0.488 vs 0.548초, Mann-Whitney p=0.50).
+#   - 손실 0건. 기존 매칭 중 116건(0.24%)이 다른 edge로 바뀌는데, 전부 |지연|이
+#     줄어드는 방향이다(116/116, 중위 +0.896 → -0.608초).
+#   - -1.0/-1.2로 더 넓혀도 회수는 129개 더 늘 뿐이고 NOISE_MARGIN(1.2)과 경계가 겹친다.
+#
+# ⚠️ 이 창은 **edge 매칭**에만 쓴다. 비슷해 보이는 창이 셋 더 있고 전부 별개다.
+#
+#  (1) 매칭 창 (LAT_LO/LAT_HI, 아래) — 이미 있는 edge 중 어느 것을 그 anchor의 반응으로
+#      집계할지. `match_edge`·`validate_cycle_edges`·`extract_responses`가 쓴다.
+#  (2) 국소 검출 창 (DETECT_LO/DETECT_HI) — 매칭되는 edge가 **없는** anchor에서 약한
+#      반응을 새로 찾아낼 때의 탐색 범위. `detect_edge_near`와 `detect_eag_edges_protocol`.
+#  (3) offset 추정 창 (`_match_stats`의 기본값, `offset_match_profile`의 -0.2/1.0).
+#
+# **(1)만 넓혔다.** (2)를 같이 넓히면 자동 검출된 edge **집합 자체**가 달라진다
+# (실측: 한 trial에서 ch1 17→16개, ch8 12→11개). `detect_eag_edges_protocol`은
+# "매칭되는 edge가 없는 anchor"에만 국소 보강을 하므로, 창을 넓혀 이미 매칭되는 anchor가
+# 늘면 보강이 건너뛰어지고 그 edge가 아예 생기지 않는다. 2026-10-14 1차 재추출에서
+# (1)(2)를 함께 넓혔다가 예측(회수 941·손실 0·귀속변경 116)과 전혀 다른 결과
+# (회수 2520·손실 460·귀속변경 12386)가 나온 원인이 이것이다. 측정은 edge 집합을
+# 고정한 상태에서 매칭만 다시 한 것이었으므로 (1)만 바꿔야 예측과 대응된다.
+# (2)를 넓히는 것은 검출기를 바꾸는 별개의 결정이고, 그러려면 따로 측정해야 한다.
+#
+# (3)을 바꾸면 자동 offset이 움직여 이미 확정한 offset의 맥락이 흔들린다
+# (§7 "offset 먼저, edge 나중"). 건드리지 않았다.
+LAT_LO = -0.8
+LAT_HI = 1.5
+
+# 국소 검출 창 — **변경하지 않았다.** 위 (2) 참조.
+DETECT_LO = -0.5
+DETECT_HI = 1.5
+
 
 def find_plateaus(time: np.ndarray, signed: np.ndarray,
                   tol: float = 0.08, min_dur: float = 1.0) -> List[tuple]:
@@ -407,7 +450,7 @@ def cycles_to_transitions(cycles: List[LoadCycle],
 
 
 def match_edge(edge_on: np.ndarray, edge_amp: np.ndarray, t: float, want: str,
-               lat_lo: float = -0.5, lat_hi: float = 1.5) -> int:
+               lat_lo: float = LAT_LO, lat_hi: float = LAT_HI) -> int:
     """anchor 시각 t에 대응하는 edge 인덱스. 방향 규칙을 만족하는 후보 중 가장 가까운 것.
 
     '가장 가까운 edge'만 고르면 노이즈가 anchor에 더 붙어 있을 때 반대 방향 edge를
@@ -429,7 +472,7 @@ def match_edge(edge_on: np.ndarray, edge_amp: np.ndarray, t: float, want: str,
 
 
 def detect_edge_near(te: np.ndarray, sig: np.ndarray, t0: float, fs: int,
-                     lat_lo: float = -0.5, lat_hi: float = 1.5,
+                     lat_lo: float = DETECT_LO, lat_hi: float = DETECT_HI,
                      frac: float = 0.30, min_amp: float = 8.0,
                      smooth_sec: float = 0.20, max_dur: float = 2.5,
                      want: str = ''):
@@ -483,7 +526,7 @@ def detect_edge_near(te: np.ndarray, sig: np.ndarray, t0: float, fs: int,
 
 def detect_eag_edges_protocol(te: np.ndarray, sig: np.ndarray,
                               anchors: List[GRFTransition], fs: int,
-                              lat_lo: float = -0.5, lat_hi: float = 1.5,
+                              lat_lo: float = DETECT_LO, lat_hi: float = DETECT_HI,
                               **kw) -> List[Tuple[float, float, float, float, float]]:
     """전역 검출 + anchor별 국소 보강.
 
@@ -508,7 +551,7 @@ def detect_eag_edges_protocol(te: np.ndarray, sig: np.ndarray,
 def validate_cycle_edges(cycles: List[LoadCycle], edge_on: np.ndarray,
                          edge_amp: np.ndarray,
                          raw_trans: Optional[List[GRFTransition]] = None,
-                         lat_lo: float = -0.5, lat_hi: float = 1.5) -> dict:
+                         lat_lo: float = LAT_LO, lat_hi: float = LAT_HI) -> dict:
     """세션·채널의 EAG edge가 프로토콜(4 cycle × 2 = 8 이벤트)을 만족하는지 검사.
 
     각 cycle의 부하 시작/종료 anchor마다 [lat_lo, lat_hi] 안에 edge가 하나씩 있어야 하고,
@@ -995,7 +1038,7 @@ def annotate_session(session_dir: str,
 
 def extract_responses(sa: SyncAnalyzer, trans: List[GRFTransition],
                       te_corr: np.ndarray, channels: List[int],
-                      lat_lo: float = -0.5, lat_hi: float = 1.5) -> List[TriggeredResponse]:
+                      lat_lo: float = LAT_LO, lat_hi: float = LAT_HI) -> List[TriggeredResponse]:
     """GRF 전이(anchor)별 × 채널별 EAG knee-pair 추출 (파일 IO 없음, 재사용용).
 
     각 GRF 전이 시점 부근 [lat_lo, lat_hi]에서 가장 가까운(동시) EAG edge를 골라
@@ -1016,10 +1059,13 @@ def extract_responses(sa: SyncAnalyzer, trans: List[GRFTransition],
                         e['offset_time'], e['offset_amp']) for e in man]
         else:
             eag_c = detrend(sa.eag_filtered[:, ch - 1])
-            # anchor(=프로토콜 이벤트)가 주어지면 놓친 약한 반응을 국소 보강해 회수한다
+            # anchor(=프로토콜 이벤트)가 주어지면 놓친 약한 반응을 국소 보강해 회수한다.
+            # **검출 창(DETECT_*)을 쓴다.** 여기에 이 함수의 lat_lo/lat_hi(매칭 창)를
+            # 넘기면 매칭 창을 바꾼 것이 검출기까지 번져 edge 집합 자체가 달라진다
+            # (LAT_LO 주석의 (1)/(2) 구분 참조). 2026-10-14 재추출에서 이 전달이
+            # 남아 있어 기본값 분리가 무효화됐다.
             edges_c = detect_eag_edges_protocol(te_corr, eag_c, trans,
-                                                fs=sa.eag.sample_rate,
-                                                lat_lo=lat_lo, lat_hi=lat_hi)
+                                                fs=sa.eag.sample_rate)
         e_on = np.array([e[0] for e in edges_c]) if edges_c else np.array([])
         for tr in trans:
             matched = False
