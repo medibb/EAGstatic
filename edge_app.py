@@ -214,6 +214,11 @@ def load_protocol_status() -> dict:
     """edge_review 배치 결과 → 세션별 (통과채널수, 전체채널수, cycle수).
 
     edge_review.py --dir data 로 생성. 없으면 빈 dict (드롭다운에 상태 미표시).
+
+    **분석제외 라벨이 붙은 채널은 분모에서 뺀다.** edge_review는 그런 채널을
+    `ok=False`(사유 '분석제외(…)')로 적는데, 그대로 세면 "손봐야 할 채널"로 보인다.
+    이미 처리가 끝난 것이므로 작업량을 부풀릴 이유가 없다 (실측: 코호트·PASS·cycle4
+    기준 326 → 237).
     """
     p = Path('result/edge_review/all_channels.csv')
     if not p.exists():
@@ -221,6 +226,8 @@ def load_protocol_status() -> dict:
     out = {}
     with open(p, encoding='utf-8') as f:
         for r in csv.DictReader(f):
+            if (r.get('excluded') or '').strip():
+                continue
             key = (r['subject'], r['session'])
             e = out.setdefault(key, {'ok': 0, 'total': 0, 'cycles': None})
             e['total'] += 1
@@ -610,10 +617,21 @@ async function revalidate(){
 }
 function markDirty(){dirty=true;}
 function edited(){markDirty();revalidate();}   // 편집 직후 공통 처리
+
+// 미저장 편집 보호. knee 드래그는 브라우저 메모리(D.edges)만 바꾸고, 디스크에는
+// Save(/api/save)만 쓴다. 자동저장이 없으므로 다른 세션/채널을 Load하거나 새로고침하면
+// 그때까지의 이동이 **경고 없이** 사라졌다. 실제로 그렇게 유실된 작업이 있었다.
+function confirmDiscard(){
+ return !dirty || confirm('저장하지 않은 edge 변경이 있습니다.\n'
+   + '버리고 이동할까요?\n\n(유지하려면 취소 → Save를 먼저 누르세요)');
+}
+window.addEventListener('beforeunload',ev=>{   // 새로고침·탭 닫기
+ if(dirty){ev.preventDefault();ev.returnValue='';}
+});
 function setAdd(v){addMode=v;addPts=[];document.getElementById('addmode').classList.toggle('on',v);}
 document.getElementById('addmode').onclick=()=>setAdd(!addMode);
 document.getElementById('del').onclick=()=>{if(sel>=0){D.edges.splice(sel,1);sel=-1;draw();edited();}};
-document.getElementById('load').onclick=load;
+document.getElementById('load').onclick=()=>{if(confirmDiscard())load();};
 async function load(){let s=document.getElementById('sess').value,ch=document.getElementById('ch').value;
  status('loading...');let res=await fetch(api('api/data?session='+encodeURIComponent(s)+'&channel='+ch));
  let j=await res.json(); if(j.error){status('ERR: '+j.error);return;} D=j;sel=-1;addPts=[];setAdd(false);fitView();
@@ -624,7 +642,9 @@ async function load(){let s=document.getElementById('sess').value,ch=document.ge
  status('loaded '+D.edges.length+' edges');draw();}
 document.getElementById('save').onclick=async()=>{if(!D)return;let res=await fetch(api('api/save'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel,corrected_offset:D.corrected_offset,edges:D.edges})});let j=await res.json();if(j.error){status('ERR '+j.error);return;}
  status('✅ saved '+j.n+' edges');await load();refreshList();};   // 재검증 위해 재로드
-document.getElementById('reset').onclick=async()=>{if(!D)return;await fetch(api('api/reset'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});await load();refreshList();};
+document.getElementById('reset').onclick=async()=>{if(!D)return;
+ if(!confirm(`${D.subject}/${D.session} ch${D.channel}\n확정된 edge를 지우고 자동검출로 되돌릴까요?`))return;
+ await fetch(api('api/reset'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:D.subject,session:D.session,channel:D.channel})});await load();refreshList();};
 function status(t){document.getElementById('status').textContent=t;}
 // Load과 재검증이 같은 요약을 그린다 (편집 중에도 수치가 실제 edge 목록과 맞게).
 function renderMeta(){ if(!D)return; const v=D.valid||{};
@@ -727,8 +747,10 @@ function refreshList(){return fetch(api('api/sessions')).then(r=>r.json())
   renderSubjects();renderList();renderChannels();});}
 document.getElementById('filter').onchange=renderList;
 document.getElementById('subjfilter').onchange=renderList;
-document.getElementById('wl').onchange=()=>{const v=document.getElementById('wl').value;
- if(v){document.getElementById('sess').value=v;renderChannels();load();}};
+document.getElementById('wl').onchange=()=>{const sel=document.getElementById('wl'),v=sel.value;
+ if(!v)return;
+ if(!confirmDiscard()){sel.value=document.getElementById('sess').value;return;}  // 선택 되돌리기
+ document.getElementById('sess').value=v;renderChannels();load();};
 renderChannels();
 refreshList();
 </script></body></html>"""
